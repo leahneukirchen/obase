@@ -9,3 +9,4 @@ void arc4random_stir(void);
 void arc4random_addrandom(unsigned char *dat, int datlen);
 int mkstemp(char *template);
 long long strtonum(const char *nptr, long long minval, long long maxval, const char **errstr);
+char *getbsize(int *headerlenp, long *blocksizep);
