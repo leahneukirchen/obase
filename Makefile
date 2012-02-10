@@ -39,6 +39,7 @@ src/bin/test \
 src/usr.bin/apply \
 src/usr.bin/apropos \
 src/usr.bin/ar \
+src/usr.bin/arch \
 src/usr.bin/asa \
 src/usr.bin/awk \
 src/usr.bin/banner \
