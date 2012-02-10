@@ -18,6 +18,7 @@ src/bin/date \
 src/bin/dd \
 src/bin/domainname \
 src/bin/echo \
+src/bin/ed \
 src/bin/expr \
 src/bin/hostname \
 src/bin/kill \
