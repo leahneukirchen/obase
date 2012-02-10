@@ -147,6 +147,7 @@ src/usr.bin/wall \
 src/usr.bin/wc \
 src/usr.bin/what \
 src/usr.bin/whatis \
+src/usr.bin/which \
 src/usr.bin/who \
 src/usr.bin/whois \
 src/usr.bin/write \

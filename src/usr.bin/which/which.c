@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <paths.h>
 
 #define PROG_WHICH	1
 #define PROG_WHEREIS	2
@@ -77,6 +78,9 @@ main(int argc, char *argv[])
 		int mib[2];
 
 		progmode = PROG_WHEREIS;
+#ifdef OBASE
+		path = _PATH_STDPATH;
+#else
 		mib[0] = CTL_USER;
 		mib[1] = USER_CS_PATH;
 		if (sysctl(mib, 2, NULL, &n, NULL, 0) == -1)
@@ -87,6 +91,7 @@ main(int argc, char *argv[])
 			errx(1, "can't allocate memory.");
 		if (sysctl(mib, 2, path, &n, NULL, 0) == -1)
 			err(1, "unable to get user.cs_path");
+#endif
 	} else {
 		if ((path = getenv("PATH")) == NULL)
 			err(1, "can't get $PATH from environment");
