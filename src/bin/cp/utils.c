@@ -289,12 +289,14 @@ setfile(struct stat *fs, int fd)
 	 * if the server supports flags and we were trying to *remove* flags
 	 * on a file that we copied, i.e., that we didn't create.)
 	 */
+#ifndef OBASE
 	errno = 0;
 	if (fd ? fchflags(fd, fs->st_flags) : chflags(to.p_path, fs->st_flags))
 		if (errno != EOPNOTSUPP || fs->st_flags != 0) {
 			warn("chflags: %s", to.p_path);
 			rval = 1;
 		}
+#endif
 	return (rval);
 }
 
