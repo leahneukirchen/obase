@@ -25,6 +25,7 @@ src/bin/kill \
 src/bin/ksh \
 src/bin/ln \
 src/bin/ls \
+src/bin/md5 \
 src/bin/mkdir \
 src/bin/mv \
 src/bin/pax \
