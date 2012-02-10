@@ -153,12 +153,12 @@ EXTERN	struct env {
 #define OF_INTERNAL	0x08	/* set internally by shell */
 #define OF_ANY		(OF_CMDLINE | OF_SET | OF_SPECIAL | OF_INTERNAL)
 
-struct option {
+struct option_ {
     const char	*name;	/* long name of option */
     char	c;	/* character flag (if any) */
     short	flags;	/* OF_* */
 };
-extern const struct option options[];
+extern const struct option_ options[];
 
 /*
  * flags (the order of these enums MUST match the order in misc.c(options[]))

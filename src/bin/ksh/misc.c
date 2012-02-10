@@ -110,7 +110,7 @@ Xcheck_grow_(XString *xsp, char *xp, int more)
 	return xsp->beg + (xp - old_beg);
 }
 
-const struct option options[] = {
+const struct option_ options[] = {
 	/* Special cases (see parse_args()): -A, -o, -s.
 	 * Options are sorted by their longnames - the order of these
 	 * entries MUST match the order of sh_flag F* enumerations in sh.h.

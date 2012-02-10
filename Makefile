@@ -22,6 +22,7 @@ src/bin/ed \
 src/bin/expr \
 src/bin/hostname \
 src/bin/kill \
+src/bin/ksh \
 src/bin/ln \
 src/bin/ls \
 src/bin/mkdir \
