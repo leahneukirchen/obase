@@ -73,7 +73,7 @@ static __inline void	print_tos(void);
 static void		pop_print(void);
 static void		pop_printn(void);
 static __inline void	print_stack(void);
-static __inline void	dup(void);
+static __inline void	dup_(void);
 static void		swap(void);
 static void		drop(void);
 
@@ -198,7 +198,7 @@ static const struct jump_entry jump_table_data[] = {
 	{ '_',	parse_number	},
 	{ 'a',	to_ascii	},
 	{ 'c',	clear_stack	},
-	{ 'd',	dup		},
+	{ 'd',	dup_		},
 	{ 'f',	print_stack	},
 	{ 'i',	set_ibase	},
 	{ 'k',	set_scale	},
@@ -532,7 +532,7 @@ pop_printn(void)
 }
 
 static __inline void
-dup(void)
+dup_(void)
 {
 	stack_dup(&bmachine.stack);
 }
