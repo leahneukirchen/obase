@@ -149,6 +149,9 @@ done:
 	}
 
 	if (ischflags) {
+#ifdef OBASE
+		errx(-1, "chflags not implemented by obase");
+#else
 		flags = *argv;
 		if (*flags >= '0' && *flags <= '7') {
 			errno = 0;
@@ -167,6 +170,7 @@ done:
 			fclear = ~fclear;
 			oct = 0;
 		}
+#endif
 	} else if (ischmod) {
 		mode = *argv;
 		if (*mode >= '0' && *mode <= '7') {
@@ -243,6 +247,9 @@ done:
 			break;
 		}
 		if (ischflags) {
+#ifdef OBASE
+			errx(-1, "chflags not implemented by obase");
+#else
 			if (oct) {
 				if (!chflags(p->fts_accpath, fset))
 					continue;
@@ -254,6 +261,7 @@ done:
 			}
 			warn("%s", p->fts_path);
 			rval = 1;
+#endif
 		} else if (ischmod && chmod(p->fts_accpath, oct ? omode :
 		    getmode(set, p->fts_statp->st_mode)) && !fflag) {
 			warn("%s", p->fts_path);
