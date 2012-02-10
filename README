@@ -18,7 +18,7 @@ At least the ALIGN-macro is defined only meaningfully for x86_64.
 Also not ported are:
 
 asn1_compile at aucat audioctl bc bdes bgplg calendar cap_mkdb cdio
-chio chpass compile_et compress crontab csh df diff3 encrypt find
+chio chpass compile_et compress crontab csh df encrypt find
 fstat ftp gencat getcap gprof grep infocmp ipcs kdump keynote ktrace
 lastcomm locate lock login midiplay mixerctl mklocale modstat mt
 netstat newsyslog nfsstat nm oldrdist passwd pcc pctr pkill pmdb ps

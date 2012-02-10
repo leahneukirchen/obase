@@ -59,6 +59,7 @@ src/usr.bin/cut \
 src/usr.bin/dc \
 src/usr.bin/deroff \
 src/usr.bin/diff \
+src/usr.bin/diff3 \
 src/usr.bin/dirname \
 src/usr.bin/du \
 src/usr.bin/env \
