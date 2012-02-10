@@ -1,5 +1,5 @@
 USE_DPADD_MK=yes
-COPTS+= -isystem ${.CURDIR}/libobase/include -DOBASE -DLIBBSD_OVERLAY
+COPTS+= -isystem ${.CURDIR}/libobase/include -DOBASE
 COPTS+= -DMACHINE='"${MACHINE}"' -DMACHINE_ARCH='"${MACHINE_ARCH}"'
 HOSTCC=${CC}
 LIBOBASE=${.CURDIR}/libobase/libobase.a
