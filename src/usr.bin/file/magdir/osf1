@@ -1,0 +1,9 @@
+#	$OpenBSD: osf1,v 1.2 2001/01/29 01:57:57 niklas Exp $
+
+#
+# Mach magic number info
+#
+0	long		0xefbe	OSF/Rose object
+# I386 magic number info
+#
+0	short		0565	i386 COFF object

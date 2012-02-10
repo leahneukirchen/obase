@@ -1,0 +1,202 @@
+.\"	$OpenBSD: skeyinit.1,v 1.35 2011/04/23 10:14:59 sobrado Exp $
+.\"	$NetBSD: skeyinit.1,v 1.4 1995/07/07 22:24:09 jtc Exp $
+.\"	@(#)skeyinit.1	1.1 	10/28/93
+.\"
+.Dd $Mdocdate: April 23 2011 $
+.Dt SKEYINIT 1
+.Os
+.Sh NAME
+.Nm skeyinit
+.Nd change password or add user to S/Key authentication system
+.Sh SYNOPSIS
+.Nm skeyinit
+.Bk -words
+.Op Fl CDErsx
+.Op Fl a Ar auth-type
+.Op Fl n Ar count
+.Op Fl md4 | md5 | rmd160 | sha1
+.Op Ar user
+.Ek
+.Sh DESCRIPTION
+.Nm
+initializes the system so you can use S/Key one-time passwords to log in.
+The program will ask you to enter a secret passphrase which is used by
+.Xr skey 1
+to generate one-time passwords:
+enter a phrase of several words in response.
+After the S/Key database
+has been updated you can log in using either your regular password
+or using S/Key one-time passwords.
+.Pp
+.Nm
+requires you to type a secret passphrase, so it should be used
+only on a secure terminal.
+For example, on the console of a
+workstation or over an encrypted network session.
+If you are using
+.Nm
+while logged in over an untrusted network, follow the instructions
+given below with the
+.Fl s
+option.
+.Pp
+Before initializing an S/Key entry, the user must authenticate
+using either a standard password or an S/Key challenge.
+To use a one-time password for initial authentication,
+.Ic skeyinit -a skey
+can be used.
+The user will then be presented with the standard
+S/Key challenge and allowed to proceed if it is correct.
+.Pp
+.Nm
+prints a sequence number and a one-time password.
+This password can't be used to log in; one-time passwords should be
+generated using
+.Xr skey 1
+first.
+The one-time password printed by
+.Nm
+can be used to verify if the right passphrase has been given to
+.Xr skey 1 .
+The one-time password with the corresponding sequence number printed by
+.Xr skey 1
+should match the one printed by
+.Nm .
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl a Ar auth-type
+Before an S/Key entry can be initialised,
+the user must authenticate themselves to the system.
+This option allows the authentication type to be specified, such as
+.Dq krb5 ,
+.Dq passwd ,
+or
+.Dq skey .
+.It Fl C
+Converts from the old-style
+.Pa /etc/skeykeys
+database to a new-style database where user records are stored in the
+.Pa /etc/skey
+directory.
+If an entry already exists in the new-style database it will not
+be overwritten.
+.It Fl D
+Disables access to the S/Key database.
+Only the superuser may use the
+.Fl D
+option.
+.It Fl E
+Enables access to the S/Key database.
+Only the superuser may use the
+.Fl E
+option.
+.It Fl md4 | md5 | rmd160 | sha1
+Selects the hash algorithm:
+MD4, MD5, RMD-160 (160-bit Ripe Message Digest),
+or SHA1 (NIST Secure Hash Algorithm Revision 1).
+.It Fl n Ar count
+Start the
+.Nm skey
+sequence at
+.Ar count
+(default is 100).
+.It Fl r
+Removes the user's S/Key entry.
+.It Fl s
+Secure mode.
+The user is expected to have already used a secure
+machine to generate the first one-time password.
+Without the
+.Fl s
+option the system will assume you are directly connected over secure
+communications and prompt you for your secret passphrase.
+The
+.Fl s
+option also allows one to set the seed and count for complete
+control of the parameters.
+.Pp
+When the
+.Fl s
+option is specified,
+.Nm
+will try to authenticate the user via S/Key, instead of the default listed in
+.Pa /etc/login.conf .
+If a user has no entry in the S/Key database, an alternate authentication
+type must be specified via the
+.Fl a
+option
+(see above).
+Please note that entering a password or passphrase in plain text
+defeats the purpose of using
+.Dq secure
+mode.
+.Pp
+You can use
+.Ic skeyinit -s
+in combination with the
+.Nm skey
+command to set the seed and count if you do not like the defaults.
+To do this run
+.Ic skeyinit -s
+in one window and put in your count and seed, then run
+.Xr skey 1
+in another window to generate the correct 6 English words for that
+count and seed.
+You can then "cut-and-paste" or type the words into the
+.Nm
+window.
+.It Fl x
+Displays one-time passwords in hexadecimal instead of ASCII.
+.It Ar user
+The username to be changed/added.
+By default the current user is operated on.
+.El
+.Sh FILES
+.Bl -tag -width /etc/login.conf -compact
+.It Pa /etc/login.conf
+file containing authentication types
+.It Pa /etc/skey
+directory containing user entries for S/Key
+.El
+.Sh EXAMPLES
+.Bd -literal
+$ skeyinit
+Reminder - Only use this method if you are directly connected
+           or have an encrypted channel.  If you are using telnet,
+           hit return now and use skeyinit -s.
+Password: \*(Ltenter your regular password here\*(Gt
+[Updating user with md5]
+Old seed: [md5] host12377
+Enter new secret passphrase: \*(Lttype a new passphrase here\*(Gt
+Again secret passphrase: \*(Ltagain\*(Gt
+ID user skey is otp-md5 100 host12378
+Next login password: CITE BREW IDLE CAIN ROD DOME
+$ otp-md5 -n 3 100 host12378
+Reminder - Do not use this program while logged in via telnet.
+Enter secret passphrase: \*(Lttype your passphrase here\*(Gt
+98: WERE TUG EDDY GEAR GILL TEE
+99: NEAR HA TILT FIN LONG SNOW
+100: CITE BREW IDLE CAIN ROD DOME
+.Ed
+.Pp
+The one-time password for the next login will have sequence number 99.
+.Sh ERRORS
+.Bl -tag -compact -width "skey disabled"
+.It "skey disabled"
+.Pa /etc/skey
+does not exist or is not accessible by the user.
+The superuser may enable
+.Nm
+via the
+.Fl E
+flag.
+.El
+.Sh SEE ALSO
+.Xr skey 1 ,
+.Xr skeyaudit 1 ,
+.Xr skeyinfo 1 ,
+.Xr skey 5 ,
+.Xr skeyprune 8
+.Sh AUTHORS
+Phil Karn, Neil M. Haller, John S. Walden, Scott Chasin, Todd Miller

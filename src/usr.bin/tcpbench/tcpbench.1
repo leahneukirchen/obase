@@ -1,0 +1,165 @@
+.\" $OpenBSD: tcpbench.1,v 1.17 2012/01/26 17:53:53 henning Exp $
+.\"
+.\" Copyright (c) 2008 Damien Miller <djm@mindrot.org>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate: January 26 2012 $
+.Dt TCPBENCH 1
+.Os
+.Sh NAME
+.Nm tcpbench
+.Nd TCP/UDP benchmarking and measurement tool
+.Sh SYNOPSIS
+.Nm
+.Fl l
+.Nm
+.Op Fl uv
+.Op Fl B Ar buf
+.Op Fl b Ar addr
+.Op Fl k Ar kvars
+.Op Fl n Ar connections
+.Op Fl p Ar port
+.Op Fl r Ar interval
+.Op Fl S Ar space
+.Op Fl T Ar toskeyword
+.Op Fl t Ar secs
+.Op Fl V Ar rtable
+.Ar hostname
+.Nm
+.Bk -words
+.Fl s
+.Op Fl uv
+.Op Fl B Ar buf
+.Op Fl k Ar kvars
+.Op Fl p Ar port
+.Op Fl r Ar interval
+.Op Fl S Ar space
+.Op Fl T Ar toskeyword
+.Op Fl V Ar rtable
+.Ek
+.Sh DESCRIPTION
+.Nm
+is a small tool that performs throughput benchmarking and concurrent
+sampling of kernel network variables.
+.Pp
+.Nm
+is run as a client/server pair.
+The server must be invoked with the
+.Fl s
+flag, which will cause it to listen for incoming connections.
+The client must be invoked with the
+.Ar hostname
+of a listening server to connect to.
+.Pp
+Once connected, the client will send TCP or UDP traffic as fast as possible to
+the server.
+Both the client and server will periodically display throughput
+statistics along with any kernel variables the user has selected to
+sample (using the
+.Fl k
+option, which is only available in TCP mode).
+A list of available kernel variables may be obtained using the
+.Fl l
+option.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl B Ar buf
+Specify the size of the internal read/write buffer used by
+.Nm .
+The default is 262144 bytes for TCP client/server and UDP server.
+In UDP client mode this may be used to specify the packet size on the test
+stream.
+.It Fl b Ar addr
+Specifies the IP address of the interface which is used to send the packets.
+.It Fl k Ar kvars
+Specify one or more kernel variables to monitor; multiple variables must be
+separated with commas.
+This option is only valid in TCP mode.
+The default is not to monitor any variables.
+Using this option requires read access to
+.Pa /dev/kmem .
+.It Fl l
+List the name of kernel variables available for monitoring and exit.
+.It Fl n Ar connections
+Use the given number of TCP connections (default: 1).
+UDP is connectionless so this option isn't valid.
+.It Fl p Ar port
+Specify the port used for the test stream (default: 12345).
+.It Fl r Ar interval
+Specify the statistics interval reporting rate in milliseconds (default: 1000).
+.It Fl S Ar space
+Set the size of the socket buffer used for the test stream.
+On the client this option will resize the send buffer;
+on the server it will resize the receive buffer.
+.It Fl s
+Place
+.Nm
+in server mode, where it will listen on all interfaces for incoming
+connections.
+It defaults to using TCP if
+.Fl u
+is not specified.
+.It Fl T Ar toskeyword
+Change the IPv4 TOS or IPv6 TCLASS value.
+.Ar toskeyword
+may be one of
+.Ar critical ,
+.Ar inetcontrol ,
+.Ar lowdelay ,
+.Ar netcontrol ,
+.Ar throughput ,
+.Ar reliability ,
+or one of the DiffServ Code Points:
+.Ar ef ,
+.Ar af11 ... af43 ,
+.Ar cs0 ... cs7 ;
+or a number in either hex or decimal.
+.It Fl t Ar secs
+Stop after
+.Ar secs
+seconds.
+.It Fl u
+Use UDP instead of TCP; this must be specified on both the client
+and the server.
+Transmitted packets per second (TX PPS) will be accounted on the client
+side, while received packets per second (RX PPS) will be accounted on the
+server side.
+UDP has no Protocol Control Block (PCB) so the
+.Fl k
+flags don't apply.
+.It Fl V Ar rtable
+Set the routing table to be used.
+The default is 0.
+.It Fl v
+Display verbose output.
+If specified more than once, increase the detail of information displayed.
+.El
+.Sh SEE ALSO
+.Xr netstat 1 ,
+.Xr pstat 8
+.Sh HISTORY
+The
+.Nm
+program first appeared in
+.Ox 4.4 .
+.Sh AUTHORS
+.An -nosplit
+The
+.Nm
+program was written by
+.An Damien Miller Aq djm@openbsd.org .
+.Pp
+UDP mode and libevent port by
+.An Christiano F. Haesbaert Aq haesbaert@haesbaert.org .

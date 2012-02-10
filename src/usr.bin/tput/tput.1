@@ -1,0 +1,174 @@
+.\"	$OpenBSD: tput.1,v 1.20 2012/01/15 20:06:40 schwarze Exp $
+.\"	$NetBSD: tput.1,v 1.4 1994/12/07 08:49:10 jtc Exp $
+.\"
+.\" Copyright (c) 1989, 1990, 1993
+.\"	The Regents of the University of California.  All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 3. Neither the name of the University nor the names of its contributors
+.\"    may be used to endorse or promote products derived from this software
+.\"    without specific prior written permission.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\"     @(#)tput.1	8.2 (Berkeley) 3/19/94
+.\"
+.Dd $Mdocdate: January 15 2012 $
+.Dt TPUT 1
+.Os
+.Sh NAME
+.Nm tput
+.Nd terminal capability interface
+.Sh SYNOPSIS
+.Nm tput
+.Op Fl T Ar term
+.Ar attribute
+.Op Ar attribute-args
+.Ar ...
+.Nm tput
+.Op Fl T Ar term
+.Fl S
+.Sh DESCRIPTION
+The
+.Nm
+utility makes terminal-dependent information available to users or shell
+applications.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl S
+The attributes are read from stdin instead of the command line.
+.It Fl T
+The terminal name as found in the
+.Xr terminfo
+database; for example,
+.Dq vt100
+or
+.Dq xterm .
+If not specified,
+.Nm
+retrieves the
+.Ev TERM
+variable from the environment.
+.El
+.Pp
+.Nm
+outputs a string if the
+.Ar attribute
+is of type string or a number if it is of type integer.
+If the
+.Ar attribute
+is of type boolean,
+.Nm
+exits 0 if the terminal has the capability or 1 if it
+does not.
+Each
+.Ar attribute
+should be a string defined in either
+.Xr terminfo 5
+or
+.Xr termcap 5 .
+.Pp
+If the
+.Ar attribute
+is of type string and takes arguments (e.g., cursor movement,
+the
+.Xr terminfo
+.Dq cup
+sequence) the arguments are taken from the command line immediately
+following the attribute.
+.Pp
+The following special attributes are available:
+.Bl -tag -width Ar
+.It clear
+Clear the screen (the
+.Xr terminfo
+.Dq clear
+sequence).
+.It init
+Print the
+.Xr terminfo
+initialization strings for the specified terminal.
+.It longname
+Print the descriptive name of the user's terminal type.
+.It reset
+Reset the terminal (using the
+.Xr terminfo
+reset sequences).
+.El
+.Sh EXIT STATUS
+The exit value of
+.Nm
+is based on the last attribute specified.
+If the attribute is of type string or of type integer the exit
+value is as follows:
+.Pp
+.Bl -tag -offset indent -width Ds -compact
+.It 0
+The requested string was written successfully.
+.It 2
+Usage error.
+.It 3
+Unknown terminal type.
+.It 4
+Unknown attribute name.
+.It >4
+An error occurred.
+.El
+.Pp
+If the attribute is of type boolean,
+.Nm
+exits with a value of 0 if the terminal has this attribute or
+1 if it does not.
+.Sh EXAMPLES
+.Bl -tag -width "tput cup 6 11 dch 6" -compact
+.It Li "tput clear cup 5 10"
+clear the screen and goto line 5 column 10
+.Pp
+.It Li "tput cup 6 11 dch 6"
+goto line 6 column 11 and delete 6 characters
+.El
+.Sh SEE ALSO
+.Xr terminfo 3 ,
+.Xr terminfo 5
+.Sh STANDARDS
+The
+.Nm
+utility is compliant with the
+.St -p1003.1-2008
+specification.
+.Pp
+The flag
+.Op Fl S
+is an extension to that specification.
+.Sh HISTORY
+A
+.Nm clear
+utility implementing the functionality of
+.Nm tput Cm clear
+first appeared in
+.Bx 2 .
+The
+.Nm
+utility appeared in
+.Bx 4.4 .
+.Sh BUGS
+.Nm
+can't really distinguish between different types of attributes.

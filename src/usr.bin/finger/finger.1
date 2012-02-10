@@ -1,0 +1,217 @@
+.\"	$OpenBSD: finger.1,v 1.18 2012/01/15 20:06:40 schwarze Exp $
+.\"
+.\" Copyright (c) 1989, 1990 The Regents of the University of California.
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 3. Neither the name of the University nor the names of its contributors
+.\"    may be used to endorse or promote products derived from this software
+.\"    without specific prior written permission.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\"	from: @(#)finger.1	6.14 (Berkeley) 7/27/91
+.\"
+.Dd $Mdocdate: January 15 2012 $
+.Dt FINGER 1
+.Os
+.Sh NAME
+.Nm finger
+.Nd user information lookup program
+.Sh SYNOPSIS
+.Nm finger
+.Op Fl hlMmops
+.Op Ar user ...
+.Nm finger
+.Op Fl l
+.Op Ar user@host ...
+.Sh DESCRIPTION
+The
+.Nm
+utility displays information about local and remote system users.
+By default, the following information is displayed about each user
+currently logged-in to the local host:
+.Pp
+.Bl -bullet -offset indent -compact
+.It
+login name
+.It
+user's full name
+.It
+associated terminal name
+.It
+idle time
+.It
+login time
+.It
+office location
+.It
+office phone
+.El
+.Pp
+Idle time is in minutes if it is a single integer, hours and minutes
+if a
+.Ql \&:
+is present, or days if a
+.Sq d
+is present.
+Login time is displayed as the day name if less than six days,
+else month, day, hours and minutes, unless
+more than six months ago, in which case the year is displayed rather
+than the hours and minutes.
+.Pp
+The names of terminals for which write permission is denied (see
+.Xr mesg 1 )
+are prepended with an asterisk
+.Pq Sq \&* .
+Unknown devices as well as nonexistent idle and login times are
+displayed as single asterisks.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl h
+If the
+.Fl s
+option is also specified, the name of the remote host is displayed instead of
+the office location and office phone.
+.It Fl l
+Long format.
+Produces a multi-line format displaying all of the information available from
+the
+.Fl s
+option as well as the user's home directory, home phone number, login
+shell, mail status, and the contents of the
+.Dq Pa .plan
+and
+.Dq Pa .project
+files from the user's home directory.
+.Pp
+If idle time is at least a minute and less than a day, it is
+presented in the form
+.Dq hh:mm .
+Idle times greater than a day are presented as
+.Dq d day[s]hh:mm .
+.Pp
+Phone numbers specified as eleven digits are printed as
+.Dq +N-NNN-NNN-NNNN .
+Numbers specified as ten or seven digits are printed as the appropriate
+subset of that string.
+Numbers specified as five digits are printed as
+.Dq xN-NNNN .
+Numbers specified as four digits are printed as
+.Dq xNNNN .
+.Pp
+If write permission is denied to the device, the phrase
+.Dq (messages off)
+is appended to the line containing the device name.
+One entry per user is displayed with the
+.Fl l
+option; if a user is logged on multiple times, terminal information
+is repeated once per login.
+.Pp
+Mail status is shown as
+.Dq \&No Mail.
+if there is no mail at all,
+.Do
+Mail last read DDD MMM ## HH:MM YYYY (TZ)
+.Dc
+if the person has looked
+at their mailbox since new mail arriving, or
+.Dq New mail received ... ,
+.Dq Unread since ...
+if they have new mail.
+.It Fl M
+Enable matching of
+.Ar user
+names.
+This is disabled by default on systems running YP or with large
+password databases.
+.It Fl m
+Prevent matching of
+.Ar user
+names.
+.Ar User
+is usually a login name; however, matching will also be done on the
+users' real names, unless the
+.Fl m
+option is supplied.
+All name matching performed by
+.Nm
+is case insensitive.
+.It Fl o
+If the
+.Fl s
+option is also specified, the office location and office phone is displayed
+instead of the name of the remote host.
+.It Fl p
+Prevents
+the
+.Fl l
+option of
+.Nm
+from displaying the contents of the
+.Dq Pa .plan
+and
+.Dq Pa .project
+files.
+.It Fl s
+Short format (default).
+The information as described above is displayed in a columnar fashion.
+.El
+.Pp
+If no options are specified,
+.Nm
+defaults to the
+.Fl l
+style output if operands are provided, otherwise to the
+.Fl s
+style.
+Note that some fields may be missing, in either format, if information
+is not available for them.
+.Pp
+.Nm
+may be used to look up users on a remote machine.
+The format is to specify a
+.Ar user
+as
+.Dq Li user@host ,
+or
+.Dq Li @host ,
+where the default output
+format for the former is the
+.Fl l
+style, and the default output format for the latter is the
+.Fl s
+style.
+The
+.Fl l
+option is the only option that may be passed to a remote machine.
+.Sh SEE ALSO
+.Xr chpass 1 ,
+.Xr w 1 ,
+.Xr who 1 ,
+.Xr fingerd 8
+.Sh HISTORY
+The
+.Nm
+command appeared in
+.Bx 2 .
+.Sh AUTHORS
+.An Earl T. Cohen .

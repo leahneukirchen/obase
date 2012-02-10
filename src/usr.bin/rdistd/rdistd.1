@@ -1,0 +1,73 @@
+.\"	$OpenBSD: rdistd.1,v 1.10 2009/03/09 15:28:32 jmc Exp $
+.\"
+.\" Copyright (c) 1983 Regents of the University of California.
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 3. Neither the name of the University nor the names of its contributors
+.\"    may be used to endorse or promote products derived from this software
+.\"    without specific prior written permission.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\"	$From: rdistd.man,v 6.2 1994/02/08 22:17:17 mcooper Exp $
+.\"	@(#)rdistd.8 	6.6 (Berkeley) 5/13/86
+.\"
+.Dd $Mdocdate: March 9 2009 $
+.Dt RDISTD 1
+.Os
+.Sh NAME
+.Nm rdistd
+.Nd remote file distribution server program
+.Sh SYNOPSIS
+.Nm rdistd
+.Op Fl DV
+.Fl S
+.Sh DESCRIPTION
+.Nm
+is the server program for the
+.Xr rdist 1
+command.
+It is normally run by
+.Em rdist
+via
+.Xr rsh 1
+or
+.Xr ssh 1 .
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl D
+Enable debugging messages.
+Messages are logged via
+.Xr syslog 3 .
+.It Fl S
+This argument must be specified for normal usage.
+It exists to prevent the accidental execution of
+.Nm
+since it usually resides somewhere in a normal user's
+.Ev PATH .
+.It Fl V
+Print version information and exit.
+.El
+.Sh SEE ALSO
+.Xr rdist 1 ,
+.Xr rsh 1 ,
+.Xr ssh 1

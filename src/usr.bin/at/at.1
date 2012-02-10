@@ -1,0 +1,365 @@
+.\" $OpenBSD: at.1,v 1.45 2011/09/04 10:24:46 jmc Exp $
+.\"
+.\" Copyright (C) 1993, 1994  Thomas Koenig
+.\" Copyright (C) 1993  David Parsons
+.\" Copyright (C) 2002  Todd C. Miller
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. The name of the author(s) may not be used to endorse or promote
+.\"    products derived from this software without specific prior written
+.\"    permission.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
+.\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+.\" OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+.\" IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
+.\" INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+.\" NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+.\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.Dd $Mdocdate: September 4 2011 $
+.Dt AT 1
+.Os
+.Sh NAME
+.Nm at ,
+.Nm batch
+.Nd queue, examine or delete jobs for later execution
+.Sh SYNOPSIS
+.Nm at
+.Op Fl bm
+.Op Fl f Ar file
+.Op Fl l Op Ar user ...
+.Op Fl q Ar queue
+.Fl t Ar time_arg | timespec
+.Nm at
+.Fl c | r
+.Ar job ...
+.Nm batch
+.Op Fl m
+.Op Fl f Ar file
+.Op Fl q Ar queue
+.Op Ar timespec
+.Sh DESCRIPTION
+.Nm at
+and
+.Nm batch
+read commands from standard input or a specified file which
+are to be executed at a later time, via the user's shell as
+specified by the
+.Ev SHELL
+environment variable.
+If
+.Ev SHELL
+is not set, the shell in the user's password database entry is used
+instead.
+If all else fails,
+.Xr sh 1
+will be used.
+.Pp
+The related programs are as follows:
+.Bl -tag -width Ds
+.It Nm at
+Executes commands at a specified time.
+.It Nm batch
+Executes commands when system load levels permit.
+In other words, when
+the load average drops below 1.5, or the value specified in the invocation of
+.Xr cron 8 .
+.El
+.Pp
+The options are as follows:
+.Bl -tag -width indent
+.It Fl b
+An alias for
+.Nm batch .
+.It Fl c Ar job ...
+Prints the jobs listed on the command line to standard output.
+.It Fl f Ar file
+Reads the job from
+.Ar file
+rather than standard input.
+.It Fl l Op Ar user ...
+Displays the queue of jobs which are currently awaiting execution.
+If a
+.Ar user
+argument is specified, only jobs belonging to that user will
+be displayed.
+Unless the user is the superuser, only the user's own jobs will be
+displayed.
+.It Fl m
+Send mail to the user when the job has completed, even if there was no
+output.
+.It Fl q Ar queue
+Uses the specified queue.
+A queue designation consists of a single letter.
+Valid queue designations range from
+.Sy a
+to
+.Sy z
+and
+.Sy A
+to
+.Sy Z .
+The
+.Sy c
+queue is the default for
+.Nm at
+and the
+.Sy E
+queue for
+.Nm batch .
+Queues with higher letters run with increased niceness.
+If a job is submitted to a queue designated with an uppercase letter, it
+is treated as if it had been submitted to batch at that time.
+If the user specified the
+.Fl l
+option and
+.Nm at
+is given a specific queue, only jobs pending in that queue will be shown.
+.It Fl r Ar job ...
+Remove the specified job(s) from the
+.Nm at
+queue.
+.It Fl t Ar time_arg
+Specify the job time.
+The argument should be of the form
+[[cc]yy]mmddHHMM[.SS],
+where the parts of the argument represent the following:
+.Pp
+.Bl -tag -width Ds -compact -offset indent
+.It Ar ccyy
+Year.
+If yy is specified, but cc is not,
+a value for yy between 69 and 99 results in a cc value of 19.
+Otherwise, a cc value of 20 is used.
+.It Ar mm
+Month:
+a number from 1 to 12.
+.It Ar dd
+Day:
+a number from 1 to 31.
+.It Ar HH
+Hour:
+a number from 0 to 23.
+.It Ar MM
+Minute:
+a number from 0 to 59.
+.It Ar SS
+Second:
+a number from 0 to 60
+(permitting a leap second),
+preceded by a period.
+The default is 0.
+.El
+.El
+.Pp
+.Nm at
+allows some moderately complex
+.Ar timespec
+specifications.
+It accepts times of the form
+.Ar HHMM
+or
+.Ar HH:MM
+to run a job at a specific time of day.
+(If that time is already past, the next day is assumed.)
+You may also specify
+.Sy midnight ,
+.Sy noon ,
+or
+.Sy teatime
+(4pm)
+and you can have a time-of-day suffixed with
+.Dq AM
+or
+.Dq PM
+for running in the morning or the evening.
+You can also say what day the job will be run,
+by giving a date in the form
+.Ar \%month-name day
+with an optional
+.Ar year ,
+or giving a date of the form
+.Ar dd.mm.ccyy ,
+.Ar dd.mm.yy ,
+.Ar mm/dd/ccyy ,
+.Ar mm/dd/yy ,
+.Ar mmddccyy ,
+or
+.Ar mmddyy .
+.Pp
+The year may be given as two or four digits.
+If the year is given as two digits, it is taken to occur as soon as
+possible in the future, which may be in the next century --
+unless it's last year, in which case it's considered to be
+a typo.
+.Pp
+The specification of a date must follow the specification of
+the time of day.
+You can also give times like
+.Op Sq now
+.Sy + Ar count \%time-units ,
+where the time-units can be
+.Sy minutes ,
+.Sy hours ,
+.Sy days ,
+or
+.Sy weeks
+and you can tell
+.Nm at
+to run the job today by suffixing the time with
+.Sy today
+and to run the job tomorrow by suffixing the time with
+.Sy tomorrow .
+.Pp
+For example, to run a job at 4pm three days from now, you would do
+.Ic at 4pm + 3 days .
+To run a job at 10:00am on July 31, you would do
+.Ic at 10am Jul 31 .
+To run a job at 1am tomorrow, you would do
+.Ic at 1am tomorrow .
+.Pp
+The
+.Nm at
+utility also supports the time format used by
+.Xr touch 1
+(see the
+.Fl t
+option).
+.Pp
+For both
+.Nm at
+and
+.Nm batch ,
+commands are read from standard input (or the file specified
+with the
+.Fl f
+option) and executed.
+The working directory, the environment (except for the variables
+.Ev TERM ,
+.Ev TERMCAP ,
+.Ev DISPLAY ,
+and
+.Ev _ ) ,
+and the
+.Ar umask
+are retained from the time of invocation.
+An
+.Nm at
+or
+.Nm batch
+command invoked from a
+.Xr su 1
+shell will retain the current user ID.
+The user will be mailed standard error and standard output from his
+commands, if any.
+Mail will be sent using
+.Xr sendmail 8 .
+If
+.Nm at
+is executed from a
+.Xr su 1
+shell, the owner of the login shell will receive the mail.
+.Pp
+For non-root users, permission to run
+.Nm
+is determined by the files
+.Pa /var/cron/at.allow
+and
+.Pa /var/cron/at.deny .
+.Em Note :
+these files must be readable by group crontab (if they exist).
+.Pp
+If the file
+.Pa /var/cron/at.allow
+exists, only usernames mentioned in it are allowed to use
+.Nm at .
+If
+.Pa /var/cron/at.allow
+does not exist,
+.Pa /var/cron/at.deny
+is checked.
+Every username not mentioned in it is then allowed to use
+.Nm at .
+If neither exists, only the superuser is allowed to run
+.Nm at .
+.Pp
+An empty
+.Pa /var/cron/at.deny
+means that every user is allowed to use these commands.
+This is the default configuration.
+.Sh FILES
+.Bl -tag -width /var/cron/at.allow -compact
+.It Pa /var/cron/atjobs
+directory containing job files
+.It Pa /var/cron/at.allow
+allow permission control
+.It Pa /var/cron/at.deny
+deny permission control
+.El
+.Sh EXIT STATUS
+The
+.Nm
+utility exits with one of the following values:
+.Pp
+.Bl -tag -width Ds -offset indent -compact
+.It 0
+Jobs were successfully submitted, removed, or listed.
+.It \*(Gt0
+An error occurred.
+.El
+.Sh SEE ALSO
+.Xr atq 1 ,
+.Xr atrm 1 ,
+.Xr nice 1 ,
+.Xr sh 1 ,
+.Xr touch 1 ,
+.Xr umask 2 ,
+.Xr cron 8 ,
+.Xr sendmail 8
+.Sh STANDARDS
+The
+.Nm
+and
+.Nm batch
+utilities are compliant with the
+.St -p1003.1-2008
+specification.
+.Pp
+The
+.Nm
+flags
+.Op Fl bc
+and the
+.Nm batch
+flags
+.Op Fl fmq
+are extensions to that specification.
+.Pp
+Behaviour for the
+.Fl l
+flag differs between this implementation and
+.St -p1003.1-2008 .
+.Sh AUTHORS
+.An -nosplit
+.Nm at
+was mostly written by
+.An Thomas Koenig Aq ig25@rz.uni-karlsruhe.de .
+The time parsing routines are by
+.An David Parsons Aq orc@pell.chi.il.us .
+.Sh BUGS
+.Nm at
+and
+.Nm batch
+as presently implemented are not suitable when users are competing for
+resources.
+If this is the case for your site, you might want to consider another
+batch system, such as
+.Nm nqs .

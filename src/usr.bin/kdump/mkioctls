@@ -1,0 +1,108 @@
+#!/bin/sh -
+#	$OpenBSD: mkioctls,v 1.27 2011/10/06 21:16:01 deraadt Exp $
+
+#
+# Copyright (c) 1994
+#	The Regents of the University of California.  All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of the University nor the names of its contributors
+#    may be used to endorse or promote products derived from this software
+#    without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+#
+#	@(#)mkioctls	8.2 (Berkeley) 4/28/95
+#
+${CC:-cc} -E -dM ${1+"$@"} | awk '
+BEGIN {
+	print "#include <sys/param.h>"
+	print "#include <sys/socket.h>"
+	print "#include <sys/socketvar.h>"
+	print "#include <net/route.h>"
+	print "#include <net/if.h>"
+	print "#include <net/bpf.h>"
+	print "#include <netinet/in.h>"
+	print "#include <netinet/ip_mroute.h>"
+	print "#include <netinet/if_ether.h>"
+	print "#include <netinet6/in6_var.h>"
+	print "#include <netinet6/nd6.h>"
+	print "#include <netinet6/ip6_mroute.h>"
+	print "#include <net/if_bridge.h>"
+	print "#include <sys/termios.h>"
+	print "#include <netinet/ip_ipsp.h>"
+	print "#include <net/if_enc.h>"
+	print "#include <net80211/ieee80211.h>"
+	print "#include <net80211/ieee80211_ioctl.h>"
+	print "#include <net/ppp_defs.h>"
+	print "#include <net/if_ppp.h>"
+	print "#include <net/if_pppoe.h>"
+	print "#include <net/if_tun.h>"
+	print "#include <net/pfvar.h>"
+	print "#include <sys/disklabel.h>"
+	print "#include <sys/agpio.h>"
+	print "#include <sys/ataio.h>"
+	print "#include <sys/audioio.h>"
+	print "#include <sys/cdio.h>"
+	print "#include <sys/chio.h>"
+	print "#include <sys/disk.h>"
+	print "#include <sys/dkbad.h>"
+	print "#include <sys/dkio.h>"
+	print "#include <sys/filio.h>"
+	print "#include <sys/gpio.h>"
+	print "#include <sys/midiio.h>"
+	print "#include <sys/mtio.h>"
+	print "#include <sys/pciio.h>"
+	print "#include <sys/radioio.h>"
+	print "#include <sys/scanio.h>"
+	print "#include <sys/scsiio.h>"
+	print "#include <crypto/cryptodev.h>"
+	print "#include <dev/biovar.h>"
+	print "#include <dev/systrace.h>"
+	print "#include <dev/wscons/wsconsio.h>"
+	print "#include <dev/vndioctl.h>"
+	print "#define COMPAT_43"
+	print "#include <sys/ioctl.h>"
+	print "#include \"kdump.h\""
+	print ""
+	print "const char *"
+	print "ioctlname(unsigned long val)"
+	print "{"
+	print "\tswitch (val) {"
+	print ""
+}
+
+/^#[ 	]*define[ 	]*(AGPIOC_|ATAIO|AUDIO_|BIOC|CDIO|CIOC|CHIO|DIOC|MIDI_|GPIO|SEQUENCER_|TIO|FIO|MTIOC|SIO|OSIO|SESIOC_|SIOC|PCIOC|PPPIOC|PPPOE|RIOC|RND|STRIOC|SCIOC|OSCIOC|TUN|VNDIOC|WSKBD|WSMOUSE|WSDISPLAY|WSMUX)[A-Z_0-9]*[ 	]*_IO/ {
+
+	# find where the name starts
+	for (i = 1; i <= NF; i++)
+		if ($i ~ /define/)
+			break;
+	++i;
+	ioc[$i] = 0;
+}
+
+END {
+	for(i in ioc)
+		printf("\tcase %s:\t\treturn (\"%s\");\n", i, i);
+	print "\tdefault:\t\treturn (NULL);\n\t}"
+	print "}"
+}
+'

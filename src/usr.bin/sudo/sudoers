@@ -1,0 +1,45 @@
+# $OpenBSD: sudoers,v 1.25 2009/10/26 19:28:26 millert Exp $
+#
+# sudoers file.
+#
+# This file MUST be edited with the 'visudo' command as root.
+# Failure to use 'visudo' may result in syntax or file permission errors
+# that prevent sudo from running.
+#
+# See the sudoers man page for the details on how to write a sudoers file.
+#
+
+# Host alias specification
+
+# User alias specification
+
+# Cmnd alias specification
+
+# Defaults specification
+Defaults env_keep +="DESTDIR DISTDIR EDITOR FETCH_CMD FLAVOR FTPMODE GROUP MAKE"
+Defaults env_keep +="MAKECONF MULTI_PACKAGES NOMAN OKAY_FILES OWNER PKG_CACHE"
+Defaults env_keep +="PKG_DBDIR PKG_DESTDIR PKG_PATH PKG_TMPDIR PORTSDIR"
+Defaults env_keep +="RELEASEDIR SHARED_ONLY SSH_AUTH_SOCK SUBPACKAGE VISUAL"
+Defaults env_keep +="WRKOBJDIR"
+
+# Uncomment to disable the lecture the first time you run sudo
+#Defaults !lecture
+
+# Uncomment to preserve the environment for users in group wheel
+#Defaults:%wheel !env_reset
+
+# Runas alias specification
+
+# User privilege specification
+root	ALL=(ALL) SETENV: ALL
+
+# Uncomment to allow people in group wheel to run all commands
+# and set environment variables.
+# %wheel	ALL=(ALL) SETENV: ALL
+
+# Same thing without a password
+# %wheel	ALL=(ALL) NOPASSWD: SETENV: ALL
+
+# Samples
+# %users  ALL=/sbin/mount /cdrom,/sbin/umount /cdrom
+# %users  localhost=/sbin/shutdown -h now

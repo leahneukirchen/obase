@@ -1,0 +1,50 @@
+.\" $OpenBSD: skeyinfo.1,v 1.9 2007/05/31 19:20:16 jmc Exp $
+.\"
+.Dd $Mdocdate: May 31 2007 $
+.Dt SKEYINFO 1
+.Os
+.Sh NAME
+.Nm skeyinfo
+.Nd obtain the next S/Key challenge for a user
+.Sh SYNOPSIS
+.Nm skeyinfo
+.Op Fl v
+.Op Ar user
+.Sh DESCRIPTION
+.Nm
+prints out the next S/Key challenge for the specified user or for the
+current user if no user is specified.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl v
+Print the hash algorithm as well.
+.El
+.Sh FILES
+.Bl -tag -width /etc/skey
+.It Pa /etc/skey
+directory containing user entries for S/Key
+.El
+.Sh EXAMPLES
+$ skey -n \*(Ltnumber of passwords to print\*(Gt `skeyinfo` \*(Ba lpr
+.Pp
+This would print out a list of S/Key passwords for use over
+an untrusted network (perhaps for use at a conference).
+.Sh ERRORS
+.Bl -tag -width Ds
+.It cannot open /etc/skey/user
+The user does not have an entry in
+.Pa /etc/skey
+or access to the S/Key database has been disabled.
+The database can be enabled with the
+.Xr skeyinit 1
+program.
+.It user is not listed in /etc/skey
+The S/Key database is enabled but the user does not have an entry in it.
+The
+.Xr skeyinit 1
+program can be used to create an entry for the user.
+.El
+.Sh SEE ALSO
+.Xr skey 1 ,
+.Xr skeyinit 1

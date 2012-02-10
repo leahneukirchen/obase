@@ -1,0 +1,333 @@
+.\" $OpenBSD: cdio.1,v 1.59 2011/07/09 18:10:24 stsp Exp $
+.\"
+.\" Copyright (c) 1995 Serge V. Vakulenko
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\"
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 3. All advertising materials mentioning features or use of this software
+.\"    must display the following acknowledgement:
+.\"	This product includes software developed by Serge V. Vakulenko.
+.\" 4. The name of the author may not be used to endorse or promote products
+.\"    derived from this software without specific prior written permission.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+.\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+.\" OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+.\" IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+.\" INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+.\" NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+.\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.Dd $Mdocdate: July 9 2011 $
+.Dt CDIO 1
+.Os
+.Sh NAME
+.Nm cdio
+.Nd compact disc control utility
+.Sh SYNOPSIS
+.Nm cdio
+.Op Fl sv
+.Op Fl d Ar host : Ns Ar port
+.Op Fl f Ar device
+.Op Ar command args ...
+.Sh DESCRIPTION
+The
+.Nm
+program is a compact disc control utility,
+with support for playing audio CDs and TAO CD writing.
+.Pp
+If no command is given,
+.Nm
+enters interactive mode, reading commands from the standard input.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Xo
+.Fl d
+.Ar host : Ns Ar port
+.Xc
+Specifies a CDDB host
+.Bq default: freedb.freedb.org:cddb .
+.It Fl f Ar device
+Specifies the name of the CD device, such as
+.Pa /dev/rcd0c .
+Both absolute and relative paths to
+.Pa /dev
+filenames are possible;
+the raw partition name is added if needed.
+.It Fl s
+Silent mode.
+Do not print table headers or human-readable comments.
+.It Fl v
+Verbose mode.
+A second occurrence of
+.Fl v
+causes even more information to be printed.
+.El
+.Pp
+The available commands are listed below.
+Only as many characters as are required to uniquely identify a command
+need be specified.
+If no command is given,
+only a track number or range,
+then
+.Ic play
+is assumed.
+.Bl -tag -width Ds
+.It Ic blank
+Minimally blank the disc.
+.It Ic cddbinfo Op Ar n
+Print the Table Of Contents (TOC) after matching the disc with the CDDB.
+In case of multiple matches, reissue the command with
+.Ar n .
+.It Ic cdid
+Print the disc ID that will be used for matching with the CDDB.
+.It Ic cdplay Op Ar track1-trackN ...
+Play specified tracks from disk.
+Unlike
+.Ic play ,
+the CD player need not be connected to an audio device;
+instead it rips tracks from disk and outputs audio data to
+the default
+.Xr audio 4
+device or
+.Xr aucat 1
+socket.
+Both individual tracks and track ranges may be specified.
+If range is specified in descending order tracks will be played in descending order.
+If the first value in the range is omitted, tracks from first track on disk to the specified one will be played.
+If the last value in the range is omitted, tracks from the specified track to the last track on disk will be played.
+.It Ic cdrip Op Ar track1-trackN ...
+Rip specified tracks from disk.
+Audio tracks are saved as WAVE sound files.
+All tracks will be saved in the current working directory.
+If parameters are omitted, all tracks are ripped.
+Both individual tracks and track ranges may be specified, in the same format as the
+.Ic cdplay
+command.
+.It Ic close
+Inject the disc.
+.It Ic debug Ar on | off
+Enable/disable the debugging mode of the CD device driver.
+.It Ic device Ar devname
+Make
+.Ar devname
+the current CD device.
+This is the equivalent of quitting
+.Nm
+and restarting with a different device.
+.It Ic eject
+Eject the disc.
+.It Ic exit
+A synonym for
+.Ic quit .
+.It Ic help
+Print the list of available commands.
+.It Ic info
+Print the Table Of Contents (TOC).
+If
+.Fl v
+is also specified,
+the current features and current profile is printed.
+If
+.Fl v
+is specified twice,
+the complete list of supported profiles
+and a hex dump of each current feature is printed.
+.It Ic next
+Play the next track.
+If we're at the last track, stop.
+.It Ic pause
+Stop playing.
+Do not stop the disc.
+.It Xo Ic play
+.Oo
+.Ar track1 Ns Op Ar .index1
+.Op Ar track2 Ns Op Ar .index2
+.Oc
+.Xc
+Play from
+.Ar track1
+to
+.Ar track2 ;
+an optional index point can be specified for each track.
+If only one track is specified, play from that track to the end of the disc.
+If no tracks are specified, play the whole disc.
+.It Xo Ic play
+.Oo
+.Op Ar tr1
+.Ar m1 : Ns Ar s1 Ns Oo
+.Ar .f1 Oc
+.Op Ar tr2
+.Oo Ar m2 : Ns Ar s2 Ns
+.Op Ar .f2
+.Oc Oc
+.Xc
+Play from the absolute address
+(MSF) defined by
+.Ar m1
+in minutes,
+.Ar s1
+in seconds,
+frame number
+.Ar f1 ,
+to the absolute address defined by
+.Ar m2
+in minutes,
+.Ar s2
+in seconds,
+frame number
+.Ar f2 .
+If a track number is specified
+.Pq tr Ns Ar X ,
+then the minutes, seconds, and frame numbers
+are relative to the start of that track.
+Minutes are in the range 0\(en99.
+Seconds are in the range 0\(en59.
+Frame numbers are in the range 0\(en74.
+.It Ic play Op Ar #block Op Ar len
+Play starting from the logical
+.Ar block
+using
+.Ar len
+logical blocks.
+.It Ic previous
+Play the previous track.
+If we're at the first track, restart.
+.It Ic quit
+Quit the program.
+.It Ic replay
+Replay the current track.
+.It Ic reset
+Perform a hardware reset of the device.
+.It Ic resume
+Resume playing.
+Used after the
+.Ic pause
+command.
+.It Ic set Ar lba | msf
+Set LBA
+.Pq Ar lba
+or minute-second-frame
+.Pq Ar msf
+ioctl mode.
+The default is minute-second-frame ioctl mode.
+.It Ic status
+Print information about the disc:
+the current playing status and position,
+the current media catalog status,
+and the current values of the volume for left and right channels.
+.It Ic stop
+Stop the disc.
+.It Xo Ic tao
+.Op Fl ad
+.Op Fl s Ar speed
+.Ar trackfile ...
+.Xc
+.Bq command line only
+\ \&Write a track-at-once CD containing the specified
+.Ar trackfile .
+.Pp
+The options are as follows:
+.Pp
+.Bl -tag -width Ds -compact
+.It Fl a
+Write files as audio tracks.
+File formats of audio tracks may be CDDA or WAVE
+with 2 channels of PCM audio,
+signed 16-bit (little endian) values sampled at 44100 Hz.
+.It Fl d
+Write files as data tracks (the default).
+.It Fl s Ar speed
+Specify a write speed for tracks.
+.Ar speed
+may be a numerical value between 1 and
+the maximum speed supported by the media and drive,
+or one of the literal strings
+.Dq auto
+or
+.Dq max ,
+meaning the optimal or maximum speed detected.
+The default speed is
+.Dq auto .
+.El
+.It Ic volume Ar left_channel Ar right_channel
+Set the volume of the left channel to
+.Ar left_channel
+and the volume of the right channel to
+.Ar right_channel .
+Allowed values are in the range 0\-255.
+.It Xo Ic volume
+.Ic left \*(Ba
+.Ic right \*(Ba
+.Ic mono \*(Ba
+.Ic stereo \*(Ba
+.Ic mute
+.Xc
+Respectively:
+play the left subtrack on both left and right channels;
+play the right subtrack on both left and right channels;
+set mono mode;
+set stereo mode;
+turn the sound off.
+.El
+.Sh ENVIRONMENT
+.Bl -tag -width "AUDIODEVICEXXX"
+.It Ev DISC , CDROM
+Specifies the name of the CD device to use.
+If both
+.Ev DISC
+and
+.Ev CDROM
+are set,
+.Ev DISC
+takes precedence.
+If neither
+.Ev DISC
+nor
+.Ev CDROM
+are set,
+the default is
+.Pa cd0 .
+See also the
+.Fl f
+option, above.
+.It Ev AUDIODEVICE
+Name of the
+.Xr aucat 1
+socket to connect to, or path to the
+.Xr audio 4
+device to use.
+.El
+.Sh FILES
+.Bl -tag -width /dev/rcd0c -compact
+.It Pa /dev/rcd0c
+.El
+.Sh SEE ALSO
+.Xr aucat 1 ,
+.Xr audioctl 1 ,
+.Xr mixerctl 1 ,
+.Xr audio 4
+.Sh HISTORY
+The
+.Nm
+command is based on
+.Nm cdcontrol ,
+which first appeared in
+.Fx 2.1 .
+.Sh AUTHORS
+Jean-Marc Zucconi,
+Andrey A. Chernov,
+Serge V. Vakulenko,
+Marc Espie
