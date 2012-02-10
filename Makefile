@@ -2,10 +2,11 @@ USE_DPADD_MK=yes
 COPTS+= -isystem ${.CURDIR}/libobase/include -DOBASE -Wall
 COPTS+= -DMACHINE='"${MACHINE}"' -DMACHINE_ARCH='"${MACHINE_ARCH}"'
 HOSTCC=${CC}
+HOSTCFLAGS+=${COPTS}
 LIBOBASE=${.CURDIR}/libobase/libobase.a
 INCLUDES_libobase=-isystem ${.CURDIR}/libobase/include
 DPLIBS+=${LIBOBASE}
-.export COPTS DPLIBS HOSTCC USE_DPADD_MK
+.export COPTS DPLIBS HOSTCC HOSTCFLAGS USE_DPADD_MK
 
 SUBDIR=\
 libobase \
@@ -88,6 +89,7 @@ src/usr.bin/look \
 src/usr.bin/lorder \
 src/usr.bin/m4 \
 src/usr.bin/mail \
+src/usr.bin/make \
 src/usr.bin/man \
 src/usr.bin/mandoc \
 src/usr.bin/mesg \

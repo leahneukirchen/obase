@@ -14,6 +14,7 @@ CDEFS+=-DHAS_EXTENDED_GETCWD
 
 CFLAGS+=${CDEFS}
 HOSTCFLAGS+=${CDEFS}
+LDADD=	-lrt
 
 SRCS=	arch.c buf.c cmd_exec.c compat.c cond.c dir.c direxpand.c engine.c \
 	error.c for.c init.c job.c lowparse.c main.c make.c memory.c parse.c \

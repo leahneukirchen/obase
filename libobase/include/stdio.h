@@ -1,3 +1,6 @@
+#include_next <stddef.h>
+#include_next <stdint.h>
+
 #define getline gnu_getline
 #include_next <stdio.h>
 #undef getline
