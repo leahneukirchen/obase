@@ -121,6 +121,9 @@ main(int argc, char *argv[])
 	}
 
 	if (lflag) {
+#ifdef OBASE
+		errx(-1, "-l not implemented by obase");
+#else
 		int hz;
 		long ticks;
 		int mib[2];
@@ -166,6 +169,7 @@ main(int argc, char *argv[])
 			ru.ru_nvcsw, "voluntary context switches");
 		fprintf(stderr, "%10ld  %s\n",
 			ru.ru_nivcsw, "involuntary context switches");
+#endif
 	}
 
 	if (exitonsig) {

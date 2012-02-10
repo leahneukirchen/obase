@@ -124,6 +124,7 @@ src/usr.bin/spell \
 src/usr.bin/split \
 src/usr.bin/strings \
 src/usr.bin/tee \
+src/usr.bin/time \
 src/usr.bin/touch \
 src/usr.bin/tr \
 src/usr.bin/true \
