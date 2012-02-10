@@ -208,7 +208,8 @@ dodir(char *fn, struct stat *fs, struct stat *ts, int rel)
 	*p++ = '/';
 	n_dirs = fs->st_nlink;
 	while ((dp = readdir(df))) {
-		if (dp->d_namlen == 0 || dp->d_name[dp->d_namlen - 1] == '~' ||
+		int d_namlen = strlen(dp->d_name);
+		if (d_namlen == 0 || dp->d_name[d_namlen - 1] == '~' ||
 		    strncmp(dp->d_name, ".#", 2) == 0)
 			continue;
 		for (cur = exceptions; cur != NULL; cur = cur->next) {
