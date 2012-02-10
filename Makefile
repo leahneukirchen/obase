@@ -20,6 +20,7 @@ src/bin/domainname \
 src/bin/echo \
 src/bin/expr \
 src/bin/hostname \
+src/bin/kill \
 src/bin/ln \
 src/bin/ls \
 src/bin/mkdir \
@@ -145,6 +146,7 @@ src/usr.bin/whatis \
 src/usr.bin/who \
 src/usr.bin/whois \
 src/usr.bin/write \
+src/usr.bin/xargs \
 src/usr.bin/xstr \
 src/usr.bin/yacc \
 src/usr.bin/yes
