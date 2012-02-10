@@ -1,5 +1,6 @@
 #include <sys/cdefs.h>
 #include <sys/stat.h>
+#include <sys/param.h>
 
 #define S_ISTXT S_ISVTX
 #define fflagstostr(x) ""
@@ -12,5 +13,7 @@ int bsd_getopt(int, char **, char *);
 
 mode_t getmode(const void *set, mode_t mode);
 void *setmode(const char *mode_str);
+
+#define issetugid() 0
 
 #include_next <unistd.h>

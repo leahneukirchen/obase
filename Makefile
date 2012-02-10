@@ -99,7 +99,6 @@ src/usr.bin/mkstr \
 src/usr.bin/mktemp \
 src/usr.bin/nice \
 src/usr.bin/nohup \
-src/usr.bin/pagesize \
 src/usr.bin/paste \
 src/usr.bin/patch \
 src/usr.bin/pkg-config \
@@ -118,6 +117,7 @@ src/usr.bin/script \
 src/usr.bin/sdiff \
 src/usr.bin/sed \
 src/usr.bin/shar \
+src/usr.bin/sort \
 src/usr.bin/spell \
 src/usr.bin/split \
 src/usr.bin/strings \
