@@ -8,7 +8,7 @@ CFLAGS+=-DEXTENDED -I.
 CDIAGFLAGS=-W -Wall -Wstrict-prototypes -pedantic \
 	-Wno-unused -Wno-char-subscripts -Wno-sign-compare
 
-LDADD= -ly -ll
+LDADD= -ly -lfl
 DPADD= ${LIBY} ${LIBL}
 
 SRCS=	eval.c expr.c look.c main.c misc.c gnum4.c trace.c tokenizer.l parser.y

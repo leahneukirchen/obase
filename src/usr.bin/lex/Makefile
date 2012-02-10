@@ -17,7 +17,7 @@ SRCS=	ccl.c dfa.c ecs.c gen.c main.c misc.c nfa.c parse.c sym.c tblcmp.c \
 	yylex.c
 OBJS+=	scan.o skel.o
 CLEANFILES+=parse.c parse.h scan.c skel.c y.tab.c y.tab.h
-LDADD=	-ll
+LDADD=	-lfl
 DPADD=	${LIBL}
 
 MAN = flex.1
