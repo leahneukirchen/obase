@@ -64,8 +64,7 @@ main(int argc, char *argv[])
 	int plusnow = 0, twentyfour;
 	char buf[50];
 	
-	if (setlinebuf(stdout) != 0)
-		errx(1, "Cannot set stdout to line buffered.");
+	setlinebuf(stdout);
 
 	if (argc < 2) {
 		(void)fputs("When do you have to leave? ", stdout);
