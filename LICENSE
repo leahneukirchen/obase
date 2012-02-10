@@ -1,0 +1,5 @@
+src/ is straight from OpenBSD CVS with tiny modifications.
+libobase/ is from OpenBSD CVS, FreeBSD CVS and libbsd.
+
+The /Makefile and unmarked headers in libobase/include/
+are in the public domain.

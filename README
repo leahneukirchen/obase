@@ -1,0 +1,29 @@
+This is obase, a port of the OpenBSD userland to Linux.
+You need bmake and OpenSSL installed to build it.
+
+Most OS-independent tools just work, with a few exceptions:
+- grep is not built because grep -F cannot be implemented on glibc regcomp.
+- tail is not built because tail -f depends on kqueue.
+
+Already ported tools are not built:
+cvs less mg nc ssh sudo tmux
+
+This is very alpha, and the tools haven't been tested very well yet.
+At least the ALIGN-macro is defined only meaningfully for x86_64.
+
+                                                Christian Neukirchen
+                                              chneukirchen@gmail.com
+
+
+Also not ported are:
+
+asn1_compile at aucat audioctl bc bdes bgplg calendar cap_mkdb cdio
+chio chpass compile_et compress crontab csh df diff3 encrypt find
+fstat ftp gencat getcap gprof grep infocmp ipcs kdump keynote ktrace
+lastcomm locate lock login midiplay mixerctl mklocale modstat mt
+netstat newsyslog nfsstat nm oldrdist passwd pcc pctr pkill pmdb ps
+quota radioctl rcp rdist rdistd rsh rup ruptime rusers rwall rwho
+sendbug showmount skey skeyaudit skeyinfo skeyinit stat strip stty su
+systat systrace tail talk tcopy tcpbench telnet tftp tic tip top tput
+tset usbhidaction usbhidctl vi vmstat w x99token xinstall xlint ypcat
+ypmatch ypwhich
