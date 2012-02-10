@@ -215,6 +215,7 @@ do_move(char *from, char *to)
 		return (1);
 	}
 
+#ifndef OBASE
 	/* Disallow moving a mount point. */
 	if (S_ISDIR(fsb.st_mode)) {
 		struct statfs sfs;
@@ -229,6 +230,7 @@ do_move(char *from, char *to)
 			return (1);
 		}
 	}
+#endif
 
 	/*
 	 * (4)	If the destination path exists, mv shall attempt to remove it.
@@ -318,10 +320,12 @@ err:		if (unlink(to))
 	 * if the server supports flags and we were trying to *remove* flags
 	 * on a file that we copied, i.e., that we didn't create.)
 	 */
+#ifndef OBASE
 	errno = 0;
 	if (fchflags(to_fd, sbp->st_flags))
 		if (errno != EOPNOTSUPP || sbp->st_flags != 0)
 			warn("%s: set flags", to);
+#endif
 
 	TIMESPEC_TO_TIMEVAL(&tval[0], &sbp->st_atimespec);
 	TIMESPEC_TO_TIMEVAL(&tval[1], &sbp->st_mtimespec);
