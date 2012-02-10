@@ -23,6 +23,7 @@ src/bin/ln \
 src/bin/ls \
 src/bin/mkdir \
 src/bin/mv \
+src/bin/pax \
 src/bin/pwd \
 src/bin/rm \
 src/bin/rmail \
