@@ -16,5 +16,10 @@ static const char *sys_signame[] =
 	"57","58","59","60","61","62","63","64"
 };
 
+/* Not really.  */
+#define sys_siglist sys_signame
+
 #include_next <signal.h>
+typedef sighandler_t sig_t;
+
 #endif

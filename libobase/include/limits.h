@@ -1,3 +1,6 @@
+#ifndef OBASE_LIMITS_H
+#define OBASE_LIMITS_H
+
 #include_next <stdint.h>
 #define QUAD_MIN INT64_MIN
 #define QUAD_MAX INT64_MAX
@@ -6,3 +9,5 @@
 
 #include <sys/param.h>
 #include_next <limits.h>
+
+#endif

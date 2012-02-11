@@ -8,4 +8,15 @@
         __asm__(".weak " __STRING(alias) " ; " __STRING(alias)  \
             " = " __STRING(sym))
 
-#include_next <sys/cdefs.h>
+#ifdef  __cplusplus
+# define __BEGIN_DECLS  extern "C" {
+# define __END_DECLS    }
+#else
+# define __BEGIN_DECLS
+# define __END_DECLS
+#endif
+
+#define __CONCAT(x,y)   x ## y
+#define __STRING(x)     #x
+
+#define __THROW

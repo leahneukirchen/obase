@@ -1,5 +1,7 @@
+#include <sys/cdefs.h>
 #include_next <stddef.h>
 #include_next <stdint.h>
+#include_next <fcntl.h>
 
 #define getline gnu_getline
 #include_next <stdio.h>

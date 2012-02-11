@@ -1,5 +1,5 @@
 USE_DPADD_MK=yes
-COPTS+= -isystem ${.CURDIR}/libobase/include -DOBASE -Os -Wall
+COPTS+= -DOBASE -D_GNU_SOURCE -Os -Wall
 COPTS+= -DMACHINE='"${MACHINE}"' -DMACHINE_ARCH='"${MACHINE_ARCH}"'
 HOSTCC=${CC}
 HOSTCFLAGS+=${COPTS}
@@ -12,11 +12,11 @@ SUBDIR=\
 libobase \
 \
 src/bin/cat \
-src/bin/chmod \
-src/bin/cp \
-src/bin/date \
-src/bin/dd \
-src/bin/domainname \
+xsrc/bin/chmod \
+xsrc/bin/cp \
+xsrc/bin/date \
+xsrc/bin/dd \
+xsrc/bin/domainname \
 src/bin/echo \
 src/bin/ed \
 src/bin/expr \
@@ -24,13 +24,13 @@ src/bin/hostname \
 src/bin/kill \
 src/bin/ksh \
 src/bin/ln \
-src/bin/ls \
-src/bin/md5 \
+xsrc/bin/ls \
+xsrc/bin/md5 \
 src/bin/mkdir \
 src/bin/mv \
-src/bin/pax \
+xsrc/bin/pax \
 src/bin/pwd \
-src/bin/rm \
+xsrc/bin/rm \
 src/bin/rmail \
 src/bin/rmdir \
 src/bin/sleep \
@@ -42,12 +42,12 @@ src/usr.bin/apropos \
 src/usr.bin/ar \
 src/usr.bin/arch \
 src/usr.bin/asa \
-src/usr.bin/awk \
+xsrc/usr.bin/awk \
 src/usr.bin/banner \
 src/usr.bin/basename \
 src/usr.bin/biff \
 src/usr.bin/cal \
-src/usr.bin/cmp \
+xsrc/usr.bin/cmp \
 src/usr.bin/col \
 src/usr.bin/colrm \
 src/usr.bin/column \
@@ -56,12 +56,12 @@ src/usr.bin/cpp \
 src/usr.bin/csplit \
 src/usr.bin/ctags \
 src/usr.bin/cut \
-src/usr.bin/dc \
+xsrc/usr.bin/dc \
 src/usr.bin/deroff \
 src/usr.bin/diff \
 src/usr.bin/diff3 \
 src/usr.bin/dirname \
-src/usr.bin/du \
+xsrc/usr.bin/du \
 src/usr.bin/env \
 src/usr.bin/expand \
 src/usr.bin/false \
@@ -74,9 +74,9 @@ src/usr.bin/fold \
 src/usr.bin/from \
 src/usr.bin/fsplit \
 src/usr.bin/getconf \
-src/usr.bin/getent \
+xsrc/usr.bin/getent \
 src/usr.bin/getopt \
-src/usr.bin/gzsig \
+xsrc/usr.bin/gzsig \
 src/usr.bin/head \
 src/usr.bin/hexdump \
 src/usr.bin/id \
@@ -87,17 +87,17 @@ src/usr.bin/jot \
 src/usr.bin/lam \
 src/usr.bin/last \
 src/usr.bin/leave \
-src/usr.bin/lex \
+xsrc/usr.bin/lex \
 src/usr.bin/lndir \
 src/usr.bin/logger \
 src/usr.bin/logname \
 src/usr.bin/look \
 src/usr.bin/lorder \
-src/usr.bin/m4 \
-src/usr.bin/mail \
-src/usr.bin/make \
-src/usr.bin/man \
-src/usr.bin/mandoc \
+xsrc/usr.bin/m4 \
+xsrc/usr.bin/mail \
+xsrc/usr.bin/make \
+xsrc/usr.bin/man \
+xsrc/usr.bin/mandoc \
 src/usr.bin/mesg \
 src/usr.bin/mkdep \
 src/usr.bin/mkstr \
@@ -111,29 +111,29 @@ src/usr.bin/pr \
 src/usr.bin/printenv \
 src/usr.bin/printf \
 src/usr.bin/ranlib \
-src/usr.bin/rcs \
+xsrc/usr.bin/rcs \
 src/usr.bin/readlink \
 src/usr.bin/renice \
 src/usr.bin/rev \
-src/usr.bin/rpcgen \
-src/usr.bin/rpcinfo \
+xsrc/usr.bin/rpcgen \
+xsrc/usr.bin/rpcinfo \
 src/usr.bin/rs \
-src/usr.bin/script \
+xsrc/usr.bin/script \
 src/usr.bin/sdiff \
-src/usr.bin/sed \
+xsrc/usr.bin/sed \
 src/usr.bin/shar \
-src/usr.bin/sort \
+xsrc/usr.bin/sort \
 src/usr.bin/spell \
-src/usr.bin/split \
-src/usr.bin/strings \
+xsrc/usr.bin/split \
+xsrc/usr.bin/strings \
 src/usr.bin/tee \
 src/usr.bin/time \
-src/usr.bin/touch \
+xsrc/usr.bin/touch \
 src/usr.bin/tr \
 src/usr.bin/true \
 src/usr.bin/tsort \
 src/usr.bin/tty \
-src/usr.bin/ul \
+xsrc/usr.bin/ul \
 src/usr.bin/uname \
 src/usr.bin/unexpand \
 src/usr.bin/unifdef \
@@ -141,9 +141,9 @@ src/usr.bin/uniq \
 src/usr.bin/units \
 src/usr.bin/unvis \
 src/usr.bin/users \
-src/usr.bin/uudecode \
-src/usr.bin/uuencode \
-src/usr.bin/vacation \
+xsrc/usr.bin/uudecode \
+xsrc/usr.bin/uuencode \
+xsrc/usr.bin/vacation \
 src/usr.bin/vis \
 src/usr.bin/wall \
 src/usr.bin/wc \

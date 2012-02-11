@@ -8,3 +8,5 @@
 #define st_ctimensec st_ctim.tv_nsec
 #define st_mtimensec st_mtim.tv_nsec
 #define f_iosize f_bsize
+
+#define DEFFILEMODE (S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH)/* 0666*/

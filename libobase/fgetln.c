@@ -30,7 +30,6 @@
 #include <sys/types.h>
 #include <string.h>
 
-#ifdef __GLIBC__
 char *
 fgetln(FILE *stream, size_t *len)
 {
@@ -48,6 +47,3 @@ fgetln(FILE *stream, size_t *len)
 		return line;
 	}
 }
-#else
-#error "Function fgetln() needs to be ported."
-#endif
