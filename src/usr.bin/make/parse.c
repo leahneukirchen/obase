@@ -1,4 +1,4 @@
-/*	$OpenBSD: parse.c,v 1.100 2010/12/26 13:09:22 espie Exp $	*/
+/*	$OpenBSD: parse.c,v 1.104 2012/04/20 13:28:11 espie Exp $	*/
 /*	$NetBSD: parse.c,v 1.29 1997/03/10 21:20:04 christos Exp $	*/
 
 /*
@@ -194,6 +194,8 @@ static void dump_targets(void);
 #define SPECIAL_WAIT		29U
 #define SPECIAL_NOPATH		30U
 #define SPECIAL_ERROR		31U
+#define SPECIAL_CHEAP		32U
+#define SPECIAL_EXPENSIVE	33U
 
 
 #define P(k) k, sizeof(k), K_##k
@@ -232,6 +234,8 @@ static struct {
     { P(NODE_SUFFIXES),	SPECIAL_SUFFIXES | SPECIAL_TARGET,	0, },
     { P(NODE_USE),	SPECIAL_USE | SPECIAL_TARGETSOURCE,	OP_USE, },
     { P(NODE_WAIT),	SPECIAL_WAIT | SPECIAL_TARGETSOURCE,	0 },
+    { P(NODE_CHEAP),	SPECIAL_CHEAP | SPECIAL_TARGETSOURCE,	OP_CHEAP, },
+    { P(NODE_EXPENSIVE),SPECIAL_EXPENSIVE | SPECIAL_TARGETSOURCE,OP_EXPENSIVE, },
 #if 0
 	{ P(NODE_NOPATH),	SPECIAL_NOPATH, },
 #endif
@@ -275,6 +279,28 @@ ParseLinkSrc(GNode *pgn, GNode *cgn)
 	}
 }
 
+static char *
+operator_string(int op)
+{
+	/* XXX we don't bother freeing this, it's used for a fatal error
+	 * anyways
+	 */
+	char *result = emalloc(5);
+	char *t = result;
+	if (op & OP_DEPENDS) {
+		*t++ = ':';
+	}
+	if (op & OP_FORCE) {
+		*t++ = '!';
+	}
+	if (op & OP_DOUBLEDEP) {
+		*t++ = ':';
+		*t++ = ':';
+	}
+	*t = 0;
+	return result;
+}
+
 /*-
  *---------------------------------------------------------------------
  * ParseDoOp  --
@@ -299,8 +325,11 @@ ParseDoOp(GNode **gnp, unsigned int op)
 	 */
 	if (((op & OP_OPMASK) != (gn->type & OP_OPMASK)) &&
 	    !OP_NOP(gn->type) && !OP_NOP(op)) {
-		Parse_Error(PARSE_FATAL, "Inconsistent operator for %s",
-		    gn->name);
+		Parse_Error(PARSE_FATAL, 
+		    "Inconsistent dependency operator for target %s\n"
+		    "\t(was %s%s, now %s%s)",
+		    gn->name, gn->name, operator_string(gn->type), 
+		    gn->name, operator_string(op));
 		return 0;
 	}
 
@@ -1013,10 +1042,8 @@ ParseAddCmd(void *gnp, void *cmd)
 	/* if target already supplied, ignore commands */
 	if (!(gn->type & OP_HAS_COMMANDS)) {
 		Lst_AtEnd(&gn->commands, cmd);
-		if (!gn->lineno) {
-			gn->lineno = Parse_Getlineno();
-			gn->fname = Parse_Getfilename();
-		}
+		if (!gn->origin.lineno)
+			Parse_FillLocation(&gn->origin);
 	}
 }
 

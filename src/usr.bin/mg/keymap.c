@@ -1,4 +1,4 @@
-/*	$OpenBSD: keymap.c,v 1.46 2011/11/28 04:41:39 lum Exp $	*/
+/*	$OpenBSD: keymap.c,v 1.49 2012/04/12 04:47:59 lum Exp $	*/
 
 /* This file is in the public domain. */
 
@@ -14,7 +14,6 @@
  * initial keymap declarations, deepest first
  */
 
-#ifndef NO_HELP
 static PF cHcG[] = {
 	ctrlg,			/* ^G */
 	help_help		/* ^H */
@@ -39,7 +38,6 @@ struct KEYMAPE (2 + IMAPEXT) helpmap = {
 		}
 	}
 };
-#endif /* !NO_HELP */
 
 struct KEYMAPE (1 + IMAPEXT) ccmap = {
 	1,
@@ -103,12 +101,10 @@ static PF cXcL[] = {
 	swapmark		/* ^X */
 };
 
-#ifndef NO_MACRO
 static PF cXlp[] = {
 	definemacro,		/* ( */
 	finishmacro		/* ) */
 };
-#endif /* !NO_MACRO */
 
 static PF cX0[] = {
 	delwind,		/* 0 */
@@ -130,14 +126,10 @@ static PF cXcar[] = {
 	usebuffer,		/* b */
 	rescan,			/* c */
 	rescan,			/* d */
-#ifndef NO_MACRO
 	executemacro,		/* e */
-#else /* !NO_MACRO */
-	rescan,			/* e */
-#endif /* !NO_MACRO */
 	setfillcol,		/* f */
 	gotoline,		/* g */
-	rescan,			/* h */
+	markbuffer,		/* h */
 	fileinsert,		/* i */
 	rescan,			/* j */
 	killbuffer_cmd,		/* k */
@@ -153,15 +145,9 @@ static PF cXcar[] = {
 	undo			/* u */
 };
 
-#ifndef NO_MACRO
 struct KEYMAPE (6 + IMAPEXT) cXmap = {
 	6,
 	6 + IMAPEXT,
-#else /* !NO_MACRO */
-static struct KEYMAPE (5 + IMAPEXT) cXmap = {
-	5,
-	5 + IMAPEXT,
-#endif /* !NO_MACRO */
 	rescan,
 	{
 		{
@@ -170,11 +156,9 @@ static struct KEYMAPE (5 + IMAPEXT) cXmap = {
 		{
 			CCHR('L'), CCHR('X'), cXcL, NULL
 		},
-#ifndef NO_MACRO
 		{
 			'(', ')', cXlp, NULL
 		},
-#endif /* !NO_MACRO */
 		{
 			'0', '4', cX0, (KEYMAP *) & cX4map
 		},
@@ -259,7 +243,7 @@ static PF metal[] = {
 	rescan,			/* y */
 	rescan,			/* z */
 	gotobop,		/* { */
-	rescan,			/* | */
+	piperegion,		/* | */
 	gotoeop			/* } */
 };
 
@@ -327,11 +311,7 @@ static PF fund_at[] = {
 };
 
 static PF fund_h[] = {
-#ifndef NO_HELP
 	NULL,			/* ^H */
-#else /* !NO_HELP */
-	rescan,			/* ^H */
-#endif /* !NO_HELP */
 };
 
 
@@ -384,15 +364,9 @@ static struct KEYMAPE (6 + NFUND_XMAPS + IMAPEXT) fundmap = {
 		{
 			CCHR('@'), CCHR('G'), fund_at, (KEYMAP *) & ccmap
 		},
-#ifndef NO_HELP
 		{
 			CCHR('H'), CCHR('H'), fund_h, (KEYMAP *) & helpmap
 		},
-#else /* !NO_HELP */
-		{
-			CCHR('@'), CCHR('H'), fund_h, NULL
-		},
-#endif /* !NO_HELP */
 		{
 			CCHR('J'), CCHR('Z'), fund_CJ, (KEYMAP *) & cXmap
 		},
@@ -496,9 +470,7 @@ static struct maps_s map_table[] = {
 	{(KEYMAP *) &metamap, "esc prefix",},
 	{(KEYMAP *) &cXmap, "c-x prefix",},
 	{(KEYMAP *) &cX4map, "c-x 4 prefix",},
-#ifndef NO_HELP
 	{(KEYMAP *) &helpmap, "help",},
-#endif
 	{NULL, NULL}
 };
 

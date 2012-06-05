@@ -1,4 +1,4 @@
-/* $OpenBSD: cmd-new-session.c,v 1.40 2012/02/02 00:10:11 nicm Exp $ */
+/* $OpenBSD: cmd-new-session.c,v 1.43 2012/05/22 10:56:48 nicm Exp $ */
 
 /*
  * Copyright (c) 2007 Nicholas Marriott <nicm@users.sourceforge.net>
@@ -63,7 +63,7 @@ cmd_new_session_exec(struct cmd *self, struct cmd_ctx *ctx)
 	struct termios		 tio, *tiop;
 	struct passwd		*pw;
 	const char		*newname, *target, *update, *cwd, *errstr;
-	char			*overrides, *cmd, *cause;
+	char			*cmd, *cause;
 	int			 detached, idx;
 	u_int			 sx, sy, i;
 
@@ -128,14 +128,7 @@ cmd_new_session_exec(struct cmd *self, struct cmd_ctx *ctx)
 
 	/* Open the terminal if necessary. */
 	if (!detached && ctx->cmdclient != NULL) {
-		if (!(ctx->cmdclient->flags & CLIENT_TERMINAL)) {
-			ctx->error(ctx, "not a terminal");
-			return (-1);
-		}
-
-		overrides =
-		    options_get_string(&global_s_options, "terminal-overrides");
-		if (tty_open(&ctx->cmdclient->tty, overrides, &cause) != 0) {
+		if (server_client_open(ctx->cmdclient, NULL, &cause) != 0) {
 			ctx->error(ctx, "open terminal failed: %s", cause);
 			xfree(cause);
 			return (-1);
@@ -238,12 +231,13 @@ cmd_new_session_exec(struct cmd *self, struct cmd_ctx *ctx)
 	 */
 	if (!detached) {
 		if (ctx->cmdclient != NULL) {
-			server_write_client(ctx->cmdclient, MSG_READY, NULL, 0);
+			server_write_ready(ctx->cmdclient);
 
 			old_s = ctx->cmdclient->session;
 			if (old_s != NULL)
 				ctx->cmdclient->last_session = old_s;
 			ctx->cmdclient->session = s;
+			notify_attached_session_changed(ctx->cmdclient);
 			session_update_activity(s);
 			server_redraw_client(ctx->cmdclient);
 		} else {
@@ -251,6 +245,7 @@ cmd_new_session_exec(struct cmd *self, struct cmd_ctx *ctx)
 			if (old_s != NULL)
 				ctx->curclient->last_session = old_s;
 			ctx->curclient->session = s;
+			notify_attached_session_changed(ctx->curclient);
 			session_update_activity(s);
 			server_redraw_client(ctx->curclient);
 		}

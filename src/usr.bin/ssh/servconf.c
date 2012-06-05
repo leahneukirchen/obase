@@ -1,4 +1,5 @@
-/* $OpenBSD: servconf.c,v 1.223 2011/09/23 00:22:04 dtucker Exp $ */
+
+/* $OpenBSD: servconf.c,v 1.226 2012/05/13 01:42:32 dtucker Exp $ */
 /*
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
  *                    All rights reserved
@@ -43,6 +44,8 @@
 #include "match.h"
 #include "channels.h"
 #include "groupaccess.h"
+#include "canohost.h"
+#include "packet.h"
 
 static void add_listen_addr(ServerOptions *, char *, int);
 static void add_one_listen_addr(ServerOptions *, char *, int);
@@ -131,6 +134,7 @@ initialize_server_options(ServerOptions *options)
 	options->authorized_principals_file = NULL;
 	options->ip_qos_interactive = -1;
 	options->ip_qos_bulk = -1;
+	options->version_addendum = NULL;
 }
 
 void
@@ -263,7 +267,8 @@ fill_default_server_options(ServerOptions *options)
 		options->ip_qos_interactive = IPTOS_LOWDELAY;
 	if (options->ip_qos_bulk == -1)
 		options->ip_qos_bulk = IPTOS_THROUGHPUT;
-
+	if (options->version_addendum == NULL)
+		options->version_addendum = xstrdup("");
 	/* Turn privilege separation on by default */
 	if (use_privsep == -1)
 		use_privsep = PRIVSEP_ON;
@@ -296,7 +301,7 @@ typedef enum {
 	sUsePrivilegeSeparation, sAllowAgentForwarding,
 	sZeroKnowledgePasswordAuthentication, sHostCertificate,
 	sRevokedKeys, sTrustedUserCAKeys, sAuthorizedPrincipalsFile,
-	sKexAlgorithms, sIPQoS,
+	sKexAlgorithms, sIPQoS, sVersionAddendum,
 	sDeprecated, sUnsupported
 } ServerOpCodes;
 
@@ -409,6 +414,7 @@ static struct {
 	{ "authorizedprincipalsfile", sAuthorizedPrincipalsFile, SSHCFG_ALL },
 	{ "kexalgorithms", sKexAlgorithms, SSHCFG_GLOBAL },
 	{ "ipqos", sIPQoS, SSHCFG_ALL },
+	{ "versionaddendum", sVersionAddendum, SSHCFG_GLOBAL },
 	{ NULL, sBadOption, 0 }
 };
 
@@ -497,6 +503,20 @@ add_one_listen_addr(ServerOptions *options, char *addr, int port)
 	options->listen_addrs = aitop;
 }
 
+struct connection_info *
+get_connection_info(int populate, int use_dns)
+{
+	static struct connection_info ci;
+
+	if (!populate)
+		return &ci;
+	ci.host = get_canonical_hostname(use_dns);
+	ci.address = get_remote_ipaddr();
+	ci.laddress = get_local_ipaddr(packet_get_connection_in());
+	ci.lport = get_local_port();
+	return &ci;
+}
+
 /*
  * The strategy for the Match blocks is that the config file is parsed twice.
  *
@@ -558,20 +578,25 @@ out:
 	return result;
 }
 
+/*
+ * All of the attributes on a single Match line are ANDed together, so we need to check every
+ * attribute and set the result to zero if any attribute does not match.
+ */
 static int
-match_cfg_line(char **condition, int line, const char *user, const char *host,
-    const char *address)
+match_cfg_line(char **condition, int line, struct connection_info *ci)
 {
-	int result = 1;
+	int result = 1, port;
 	char *arg, *attrib, *cp = *condition;
 	size_t len;
 
-	if (user == NULL)
+	if (ci == NULL)
 		debug3("checking syntax for 'Match %s'", cp);
 	else
-		debug3("checking match for '%s' user %s host %s addr %s", cp,
-		    user ? user : "(null)", host ? host : "(null)",
-		    address ? address : "(null)");
+		debug3("checking match for '%s' user %s host %s addr %s "
+		    "laddr %s lport %d", cp, ci->user ? ci->user : "(null)",
+		    ci->host ? ci->host : "(null)",
+		    ci->address ? ci->address : "(null)",
+		    ci->laddress ? ci->laddress : "(null)", ci->lport);
 
 	while ((attrib = strdelim(&cp)) && *attrib != '\0') {
 		if ((arg = strdelim(&cp)) == NULL || *arg == '\0') {
@@ -580,37 +605,45 @@ match_cfg_line(char **condition, int line, const char *user, const char *host,
 		}
 		len = strlen(arg);
 		if (strcasecmp(attrib, "user") == 0) {
-			if (!user) {
+			if (ci == NULL || ci->user == NULL) {
 				result = 0;
 				continue;
 			}
-			if (match_pattern_list(user, arg, len, 0) != 1)
+			if (match_pattern_list(ci->user, arg, len, 0) != 1)
 				result = 0;
 			else
 				debug("user %.100s matched 'User %.100s' at "
-				    "line %d", user, arg, line);
+				    "line %d", ci->user, arg, line);
 		} else if (strcasecmp(attrib, "group") == 0) {
-			switch (match_cfg_line_group(arg, line, user)) {
+			if (ci == NULL || ci->user == NULL) {
+				result = 0;
+				continue;
+			}
+			switch (match_cfg_line_group(arg, line, ci->user)) {
 			case -1:
 				return -1;
 			case 0:
 				result = 0;
 			}
 		} else if (strcasecmp(attrib, "host") == 0) {
-			if (!host) {
+			if (ci == NULL || ci->host == NULL) {
 				result = 0;
 				continue;
 			}
-			if (match_hostname(host, arg, len) != 1)
+			if (match_hostname(ci->host, arg, len) != 1)
 				result = 0;
 			else
 				debug("connection from %.100s matched 'Host "
-				    "%.100s' at line %d", host, arg, line);
+				    "%.100s' at line %d", ci->host, arg, line);
 		} else if (strcasecmp(attrib, "address") == 0) {
-			switch (addr_match_list(address, arg)) {
+			if (ci == NULL || ci->address == NULL) {
+				result = 0;
+				continue;
+			}
+			switch (addr_match_list(ci->address, arg)) {
 			case 1:
 				debug("connection from %.100s matched 'Address "
-				    "%.100s' at line %d", address, arg, line);
+				    "%.100s' at line %d", ci->address, arg, line);
 				break;
 			case 0:
 			case -1:
@@ -619,12 +652,47 @@ match_cfg_line(char **condition, int line, const char *user, const char *host,
 			case -2:
 				return -1;
 			}
+		} else if (strcasecmp(attrib, "localaddress") == 0){
+			if (ci == NULL || ci->laddress == NULL) {
+				result = 0;
+				continue;
+			}
+			switch (addr_match_list(ci->laddress, arg)) {
+			case 1:
+				debug("connection from %.100s matched "
+				    "'LocalAddress %.100s' at line %d",
+				    ci->laddress, arg, line);
+				break;
+			case 0:
+			case -1:
+				result = 0;
+				break;
+			case -2:
+				return -1;
+			}
+		} else if (strcasecmp(attrib, "localport") == 0) {
+			if ((port = a2port(arg)) == -1) {
+				error("Invalid LocalPort '%s' on Match line",
+				    arg);
+				return -1;
+			}
+			if (ci == NULL || ci->lport == 0) {
+				result = 0;
+				continue;
+			}
+			/* TODO support port lists */
+			if (port == ci->lport)
+				debug("connection from %.100s matched "
+				    "'LocalPort %d' at line %d",
+				    ci->laddress, port, line);
+			else
+				result = 0;
 		} else {
 			error("Unsupported Match attribute %s", attrib);
 			return -1;
 		}
 	}
-	if (user != NULL)
+	if (ci != NULL)
 		debug3("match %sfound", result ? "" : "not ");
 	*condition = cp;
 	return result;
@@ -671,8 +739,8 @@ static const struct multistate multistate_privsep[] = {
 
 int
 process_server_config_line(ServerOptions *options, char *line,
-    const char *filename, int linenum, int *activep, const char *user,
-    const char *host, const char *address)
+    const char *filename, int linenum, int *activep,
+    struct connection_info *connectinfo)
 {
 	char *cp, **charptr, *arg, *p;
 	int cmdline = 0, *intptr, value, value2, n;
@@ -703,7 +771,7 @@ process_server_config_line(ServerOptions *options, char *line,
 	if (*activep && opcode != sMatch)
 		debug3("%s:%d setting %s %s", filename, linenum, arg, cp);
 	if (*activep == 0 && !(flags & SSHCFG_MATCH)) {
-		if (user == NULL) {
+		if (connectinfo == NULL) {
 			fatal("%s line %d: Directive '%s' is not allowed "
 			    "within a Match block", filename, linenum, arg);
 		} else { /* this is a directive we have already processed */
@@ -1268,7 +1336,7 @@ process_server_config_line(ServerOptions *options, char *line,
 		if (cmdline)
 			fatal("Match directive not supported as a command-line "
 			   "option");
-		value = match_cfg_line(&cp, linenum, user, host, address);
+		value = match_cfg_line(&cp, linenum, connectinfo);
 		if (value < 0)
 			fatal("%s line %d: Bad Match condition", filename,
 			    linenum);
@@ -1285,6 +1353,14 @@ process_server_config_line(ServerOptions *options, char *line,
 			if (*activep && n == -1) {
 				channel_clear_adm_permitted_opens();
 				options->num_permitted_opens = 0;
+			}
+			break;
+		}
+		if (strcmp(arg, "none") == 0) {
+			if (*activep && n == -1) {
+				channel_clear_adm_permitted_opens();
+				options->num_permitted_opens = 1;
+				channel_disable_adm_local_opens();
 			}
 			break;
 		}
@@ -1350,6 +1426,22 @@ process_server_config_line(ServerOptions *options, char *line,
 		}
 		break;
 
+	case sVersionAddendum:
+		if (cp == NULL)
+			fatal("%.200s line %d: Missing argument.", filename,
+			    linenum);
+		len = strspn(cp, WHITESPACE);
+		if (*activep && options->version_addendum == NULL) {
+			if (strcasecmp(cp + len, "none") == 0)
+				options->version_addendum = xstrdup("");
+			else if (strchr(cp + len, '\r') != NULL)
+				fatal("%.200s line %d: Invalid argument",
+				    filename, linenum);
+			else
+				options->version_addendum = xstrdup(cp + len);
+		}
+		return 0;
+
 	case sDeprecated:
 		logit("%s line %d: Deprecated option %s",
 		    filename, linenum, arg);
@@ -1406,14 +1498,56 @@ load_server_config(const char *filename, Buffer *conf)
 }
 
 void
-parse_server_match_config(ServerOptions *options, const char *user,
-    const char *host, const char *address)
+parse_server_match_config(ServerOptions *options,
+   struct connection_info *connectinfo)
 {
 	ServerOptions mo;
 
 	initialize_server_options(&mo);
-	parse_server_config(&mo, "reprocess config", &cfg, user, host, address);
+	parse_server_config(&mo, "reprocess config", &cfg, connectinfo);
 	copy_set_server_options(options, &mo, 0);
+}
+
+int parse_server_match_testspec(struct connection_info *ci, char *spec)
+{
+	char *p;
+
+	while ((p = strsep(&spec, ",")) && *p != '\0') {
+		if (strncmp(p, "addr=", 5) == 0) {
+			ci->address = xstrdup(p + 5);
+		} else if (strncmp(p, "host=", 5) == 0) {
+			ci->host = xstrdup(p + 5);
+		} else if (strncmp(p, "user=", 5) == 0) {
+			ci->user = xstrdup(p + 5);
+		} else if (strncmp(p, "laddr=", 6) == 0) {
+			ci->laddress = xstrdup(p + 6);
+		} else if (strncmp(p, "lport=", 6) == 0) {
+			ci->lport = a2port(p + 6);
+			if (ci->lport == -1) {
+				fprintf(stderr, "Invalid port '%s' in test mode"
+				   " specification %s\n", p+6, p);
+				return -1;
+			}
+		} else {
+			fprintf(stderr, "Invalid test mode specification %s\n",
+			   p);
+			return -1;
+		}
+	}
+	return 0;
+}
+
+/*
+ * returns 1 for a complete spec, 0 for partial spec and -1 for an
+ * empty spec.
+ */
+int server_match_spec_complete(struct connection_info *ci)
+{
+	if (ci->user && ci->host && ci->address)
+		return 1;	/* complete */
+	if (!ci->user && !ci->host && !ci->address)
+		return -1;	/* empty */
+	return 0;	/* partial */
 }
 
 /* Helper macros */
@@ -1489,7 +1623,7 @@ copy_set_server_options(ServerOptions *dst, ServerOptions *src, int preauth)
 
 void
 parse_server_config(ServerOptions *options, const char *filename, Buffer *conf,
-    const char *user, const char *host, const char *address)
+    struct connection_info *connectinfo)
 {
 	int active, linenum, bad_options = 0;
 	char *cp, *obuf, *cbuf;
@@ -1497,11 +1631,11 @@ parse_server_config(ServerOptions *options, const char *filename, Buffer *conf,
 	debug2("%s: config %s len %d", __func__, filename, buffer_len(conf));
 
 	obuf = cbuf = xstrdup(buffer_ptr(conf));
-	active = user ? 0 : 1;
+	active = connectinfo ? 0 : 1;
 	linenum = 1;
 	while ((cp = strsep(&cbuf, "\n")) != NULL) {
 		if (process_server_config_line(options, cp, filename,
-		    linenum++, &active, user, host, address) != 0)
+		    linenum++, &active, connectinfo) != 0)
 			bad_options++;
 	}
 	xfree(obuf);
@@ -1708,6 +1842,7 @@ dump_config(ServerOptions *o)
 	dump_cfg_string(sRevokedKeys, o->revoked_keys_file);
 	dump_cfg_string(sAuthorizedPrincipalsFile,
 	    o->authorized_principals_file);
+	dump_cfg_string(sVersionAddendum, o->version_addendum);
 
 	/* string arguments requiring a lookup */
 	dump_cfg_string(sLogLevel, log_level_name(o->log_level));

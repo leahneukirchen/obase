@@ -1,4 +1,4 @@
-/*	$OpenBSD: fileio.c,v 1.85 2011/08/31 08:58:29 lum Exp $	*/
+/*	$OpenBSD: fileio.c,v 1.89 2012/05/25 04:56:58 lum Exp $	*/
 
 /* This file is in the public domain. */
 
@@ -22,15 +22,13 @@
 
 #include "kbd.h"
 
-static FILE	*ffp;
-
 /*
  * Open a file for reading.
  */
 int
-ffropen(const char *fn, struct buffer *bp)
+ffropen(FILE ** ffp, const char *fn, struct buffer *bp)
 {
-	if ((ffp = fopen(fn, "r")) == NULL) {
+	if ((*ffp = fopen(fn, "r")) == NULL) {
 		if (errno == ENOENT)
 			return (FIOFNF);
 		return (FIOERR);
@@ -40,7 +38,7 @@ ffropen(const char *fn, struct buffer *bp)
 	if (fisdir(fn) == TRUE)
 		return (FIODIR);
 
-	ffstat(bp);
+	ffstat(*ffp, bp);
 	
 	return (FIOSUC);
 }
@@ -49,7 +47,7 @@ ffropen(const char *fn, struct buffer *bp)
  * Update stat/dirty info
  */
 void
-ffstat(struct buffer *bp)
+ffstat(FILE *ffp, struct buffer *bp)
 {
 	struct stat	sb;
 
@@ -71,13 +69,15 @@ ffstat(struct buffer *bp)
 int
 fupdstat(struct buffer *bp)
 {
+	FILE *ffp;
+
 	if ((ffp = fopen(bp->b_fname, "r")) == NULL) {
 		if (errno == ENOENT)
 			return (FIOFNF);
 		return (FIOERR);
 	}
-	ffstat(bp);
-	(void)ffclose(bp);
+	ffstat(ffp, bp);
+	(void)ffclose(ffp, bp);
 	return (FIOSUC);
 }
 
@@ -85,7 +85,7 @@ fupdstat(struct buffer *bp)
  * Open a file for writing.
  */
 int
-ffwopen(const char *fn, struct buffer *bp)
+ffwopen(FILE ** ffp, const char *fn, struct buffer *bp)
 {
 	int	fd;
 	mode_t	fmode = DEFFILEMODE;
@@ -100,7 +100,7 @@ ffwopen(const char *fn, struct buffer *bp)
 		return (FIOERR);
 	}
 
-	if ((ffp = fdopen(fd, "w")) == NULL) {
+	if ((*ffp = fdopen(fd, "w")) == NULL) {
 		ewprintf("Cannot open file for writing : %s", strerror(errno));
 		close(fd);
 		return (FIOERR);
@@ -125,7 +125,7 @@ ffwopen(const char *fn, struct buffer *bp)
  */
 /* ARGSUSED */
 int
-ffclose(struct buffer *bp)
+ffclose(FILE *ffp, struct buffer *bp)
 {
 	if (fclose(ffp) == 0)
 		return (FIOSUC);
@@ -137,7 +137,7 @@ ffclose(struct buffer *bp)
  * buffer. Return the status.
  */
 int
-ffputbuf(struct buffer *bp)
+ffputbuf(FILE *ffp, struct buffer *bp)
 {
 	struct line   *lp, *lpend;
 
@@ -170,7 +170,7 @@ ffputbuf(struct buffer *bp)
  * If the line length exceeds nbuf, FIOLONG is returned.
  */
 int
-ffgetline(char *buf, int nbuf, int *nbytes)
+ffgetline(FILE *ffp, char *buf, int nbuf, int *nbytes)
 {
 	int	c, i;
 
@@ -270,6 +270,7 @@ fbackupfile(const char *fn)
 char *
 adjustname(const char *fn, int slashslash)
 {
+	struct stat	 statbuf; 
 	static char	 fnb[MAXPATHLEN];
 	const char	*cp, *ep = NULL;
 	char		 user[LOGIN_NAME_MAX], path[MAXPATHLEN];
@@ -291,8 +292,14 @@ adjustname(const char *fn, int slashslash)
 		}
 	}
 
-	/* first handle tilde expansion */
-	if (fn[0] == '~') {
+	/* 
+	 * Next, expand file names beginning with '~', if appropriate:
+	 *   1, if ./~fn exists, continue without expanding tilde.
+	 *   2, otherwise, if username 'fn' exists, expand tilde with home
+	 *	directory path.
+	 *   3, otherwise, continue and create new buffer called ~fn.
+	 */
+	if (fn[0] == '~' && stat(fn, &statbuf) != 0) {
 		struct passwd *pw;
 
 		cp = strchr(fn, '/');
@@ -310,20 +317,19 @@ adjustname(const char *fn, int slashslash)
 			user[ulen] = '\0';
 		}
 		pw = getpwnam(user);
-		if (pw == NULL) {
-			ewprintf("Unknown user %s", user);
-			return (NULL);
-		}
-		plen = strlcpy(path, pw->pw_dir, sizeof(path));
-		if (plen == 0 || path[plen - 1] != '/') {
-			if (strlcat(path, "/", sizeof(path)) >= sizeof(path)) {
-				ewprintf("Path too long");
-				return (NULL);
+		if (pw != NULL) {
+			plen = strlcpy(path, pw->pw_dir, sizeof(path));
+			if (plen == 0 || path[plen - 1] != '/') {
+				if (strlcat(path, "/", sizeof(path)) >=
+				    sizeof(path)) {
+					ewprintf("Path too long");
+					return (NULL);
+				}
 			}
+			fn = cp;
+			if (*fn == '/')
+				fn++;
 		}
-		fn = cp;
-		if (*fn == '/')
-			fn++;
 	}
 	if (strlcat(path, fn, sizeof(path)) >= sizeof(path)) {
 		ewprintf("Path too long");
@@ -336,7 +342,6 @@ adjustname(const char *fn, int slashslash)
 	return (fnb);
 }
 
-#ifndef NO_STARTUP
 /*
  * Find a startup file for the user and return its name. As a service
  * to other pieces of code that may want to find a startup file (like
@@ -383,7 +388,6 @@ nohome:
 #endif /* STARTUPFILE */
 	return (NULL);
 }
-#endif /* !NO_STARTUP */
 
 int
 copy(char *frname, char *toname)
@@ -551,6 +555,7 @@ make_file_list(char *buf)
 
 		if ((current = malloc(sizeof(struct list))) == NULL) {
 			free_file_list(last);
+			closedir(dirp);
 			return (NULL);
 		}
 		ret = snprintf(fl_name, sizeof(fl_name),

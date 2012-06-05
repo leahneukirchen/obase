@@ -1,7 +1,7 @@
-/*	$Id: term.c,v 1.62 2011/09/21 09:57:11 schwarze Exp $ */
+/*	$Id: term.c,v 1.64 2012/05/28 13:00:51 schwarze Exp $ */
 /*
  * Copyright (c) 2008, 2009, 2010, 2011 Kristaps Dzonsons <kristaps@bsd.lv>
- * Copyright (c) 2010, 2011 Ingo Schwarze <schwarze@openbsd.org>
+ * Copyright (c) 2010, 2011, 2012 Ingo Schwarze <schwarze@openbsd.org>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -29,6 +29,7 @@
 #include "term.h"
 #include "main.h"
 
+static	size_t		 cond_width(const struct termp *, int, int *);
 static	void		 adjbuf(struct termp *p, int);
 static	void		 bufferc(struct termp *, char);
 static	void		 encode(struct termp *, const char *, size_t);
@@ -312,7 +313,10 @@ term_vspace(struct termp *p)
 
 	term_newln(p);
 	p->viscol = 0;
-	(*p->endline)(p);
+	if (0 < p->skipvsp)
+		p->skipvsp--;
+	else
+		(*p->endline)(p);
 }
 
 void
@@ -412,12 +416,17 @@ term_word(struct termp *p, const char *word)
 	p->flags &= ~(TERMP_SENTENCE | TERMP_IGNDELIM);
 
 	while ('\0' != *word) {
-		if ((ssz = strcspn(word, "\\")) > 0)
+		if ('\\' != *word) {
+			if (TERMP_SKIPCHAR & p->flags) {
+				p->flags &= ~TERMP_SKIPCHAR;
+				word++;
+				continue;
+			}
+			ssz = strcspn(word, "\\");
 			encode(p, word, ssz);
-
-		word += (int)ssz;
-		if ('\\' != *word)
+			word += (int)ssz;
 			continue;
+		}
 
 		word++;
 		esc = mandoc_escape(&word, &seq, &sz);
@@ -473,8 +482,13 @@ term_word(struct termp *p, const char *word)
 			term_fontlast(p);
 			break;
 		case (ESCAPE_NOSPACE):
-			if ('\0' == *word)
+			if (TERMP_SKIPCHAR & p->flags)
+				p->flags &= ~TERMP_SKIPCHAR;
+			else if ('\0' == *word)
 				p->flags |= TERMP_NOSPACE;
+			break;
+		case (ESCAPE_SKIPCHAR):
+			p->flags |= TERMP_SKIPCHAR;
 			break;
 		default:
 			break;
@@ -515,6 +529,11 @@ encode1(struct termp *p, int c)
 {
 	enum termfont	  f;
 
+	if (TERMP_SKIPCHAR & p->flags) {
+		p->flags &= ~TERMP_SKIPCHAR;
+		return;
+	}
+
 	if (p->col + 4 >= p->maxcols)
 		adjbuf(p, p->col + 4);
 
@@ -537,6 +556,11 @@ encode(struct termp *p, const char *word, size_t sz)
 {
 	enum termfont	  f;
 	int		  i, len;
+
+	if (TERMP_SKIPCHAR & p->flags) {
+		p->flags &= ~TERMP_SKIPCHAR;
+		return;
+	}
 
 	/* LINTED */
 	len = sz;
@@ -586,12 +610,22 @@ term_len(const struct termp *p, size_t sz)
 	return((*p->width)(p, ' ') * sz);
 }
 
+static size_t
+cond_width(const struct termp *p, int c, int *skip)
+{
+
+	if (*skip) {
+		(*skip) = 0;
+		return(0);
+	} else
+		return((*p->width)(p, c));
+}
 
 size_t
 term_strlen(const struct termp *p, const char *cp)
 {
 	size_t		 sz, rsz, i;
-	int		 ssz, c;
+	int		 ssz, skip, c;
 	const char	*seq, *rhs;
 	enum mandoc_esc	 esc;
 	static const char rej[] = { '\\', ASCII_HYPH, ASCII_NBRSP, '\0' };
@@ -603,10 +637,11 @@ term_strlen(const struct termp *p, const char *cp)
 	 */
 
 	sz = 0;
+	skip = 0;
 	while ('\0' != *cp) {
 		rsz = strcspn(cp, rej);
 		for (i = 0; i < rsz; i++)
-			sz += (*p->width)(p, *cp++);
+			sz += cond_width(p, *cp++, &skip);
 
 		c = 0;
 		switch (*cp) {
@@ -623,14 +658,14 @@ term_strlen(const struct termp *p, const char *cp)
 						(seq + 1, ssz - 1);
 					if ('\0' == c)
 						break;
-					sz += (*p->width)(p, c);
+					sz += cond_width(p, c, &skip);
 					continue;
 				case (ESCAPE_SPECIAL):
 					c = mchars_spec2cp
 						(p->symtab, seq, ssz);
 					if (c <= 0)
 						break;
-					sz += (*p->width)(p, c);
+					sz += cond_width(p, c, &skip);
 					continue;
 				default:
 					break;
@@ -640,12 +675,12 @@ term_strlen(const struct termp *p, const char *cp)
 
 			switch (esc) {
 			case (ESCAPE_UNICODE):
-				sz += (*p->width)(p, '?');
+				sz += cond_width(p, '?', &skip);
 				break;
 			case (ESCAPE_NUMBERED):
 				c = mchars_num2char(seq, ssz);
 				if ('\0' != c)
-					sz += (*p->width)(p, c);
+					sz += cond_width(p, c, &skip);
 				break;
 			case (ESCAPE_SPECIAL):
 				rhs = mchars_spec2str
@@ -657,6 +692,9 @@ term_strlen(const struct termp *p, const char *cp)
 				rhs = seq;
 				rsz = ssz;
 				break;
+			case (ESCAPE_SKIPCHAR):
+				skip = 1;
+				break;
 			default:
 				break;
 			}
@@ -664,15 +702,20 @@ term_strlen(const struct termp *p, const char *cp)
 			if (NULL == rhs)
 				break;
 
+			if (skip) {
+				skip = 0;
+				break;
+			}
+
 			for (i = 0; i < rsz; i++)
 				sz += (*p->width)(p, *rhs++);
 			break;
 		case (ASCII_NBRSP):
-			sz += (*p->width)(p, ' ');
+			sz += cond_width(p, ' ', &skip);
 			cp++;
 			break;
 		case (ASCII_HYPH):
-			sz += (*p->width)(p, '-');
+			sz += cond_width(p, '-', &skip);
 			cp++;
 			break;
 		default:

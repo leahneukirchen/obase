@@ -1,4 +1,4 @@
-/* $OpenBSD: cmd.c,v 1.62 2012/02/06 17:29:29 nicm Exp $ */
+/* $OpenBSD: cmd.c,v 1.65 2012/04/23 22:43:09 nicm Exp $ */
 
 /*
  * Copyright (c) 2007 Nicholas Marriott <nicm@users.sourceforge.net>
@@ -68,6 +68,7 @@ const struct cmd_entry *cmd_table[] = {
 	&cmd_lock_client_entry,
 	&cmd_lock_server_entry,
 	&cmd_lock_session_entry,
+	&cmd_move_pane_entry,
 	&cmd_move_window_entry,
 	&cmd_new_session_entry,
 	&cmd_new_window_entry,
@@ -303,11 +304,10 @@ cmd_print(struct cmd *cmd, char *buf, size_t len)
 	if (off < len) {
 		used = args_print(cmd->args, buf + off, len - off);
 		if (used == 0)
-			buf[off - 1] = '\0';
-		else {
+			off--;
+		else
 			off += used;
-			buf[off] = '\0';
-		}
+		buf[off] = '\0';
 	}
 	return (off);
 }
@@ -1325,8 +1325,10 @@ find_home:
 		return (s->cwd);
 
 complete_path:
-	if (root[skip] == '\0')
-		return (root);
+	if (root[skip] == '\0') {
+		strlcpy(path, root, sizeof path);
+		return (path);
+	}
 	n = snprintf(path, sizeof path, "%s/%s", root, cwd + skip);
 	if (n > 0 && (size_t)n < sizeof path)
 		return (path);

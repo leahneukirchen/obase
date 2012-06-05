@@ -1,4 +1,4 @@
-/*	$OpenBSD: ttykbd.c,v 1.14 2005/06/14 18:14:40 kjell Exp $	*/
+/*	$OpenBSD: ttykbd.c,v 1.16 2012/04/12 04:47:59 lum Exp $	*/
 
 /* This file is in the public domain. */
 
@@ -55,14 +55,14 @@ ttykeymapinit(void)
 		dobindkey(fundamental_map, "scroll-up", key_npage);
 	if (key_ppage)
 		dobindkey(fundamental_map, "scroll-down", key_ppage);
+	if (key_dc)
+		dobindkey(fundamental_map, "delete-char", key_dc);
 #endif /* FKEYS */
 
-#ifndef	NO_STARTUP
 	if ((cp = getenv("TERM"))) {
 		if (((cp = startupfile(cp)) != NULL) && (load(cp) != TRUE))
 			ewprintf("Error reading key initialization file");
 	}
-#endif /* !NO_STARTUP */
 	if (keypad_xmit)
 		/* turn on keypad */
 		putpad(keypad_xmit, 1);

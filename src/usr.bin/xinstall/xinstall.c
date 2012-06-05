@@ -1,4 +1,4 @@
-/*	$OpenBSD: xinstall.c,v 1.49 2009/10/27 23:59:50 deraadt Exp $	*/
+/*	$OpenBSD: xinstall.c,v 1.51 2012/04/11 14:19:35 millert Exp $	*/
 /*	$NetBSD: xinstall.c,v 1.9 1995/12/20 10:25:17 jonathan Exp $	*/
 
 /*
@@ -405,6 +405,9 @@ copy(int from_fd, char *from_name, int to_fd, char *to_name, off_t size,
 	int serrno;
 	char *p, buf[MAXBSIZE];
 
+	if (size == 0)
+		return;
+
 	/* Rewind file descriptors. */
 	if (lseek(from_fd, (off_t)0, SEEK_SET) == (off_t)-1)
 		err(EX_OSERR, "lseek: %s", from_name);
@@ -417,7 +420,7 @@ copy(int from_fd, char *from_name, int to_fd, char *to_name, off_t size,
 	 * wins some CPU back.  Sparse files need special treatment.
 	 */
 	if (!sparse && size <= 8 * 1048576) {
-		volatile size_t siz;
+		size_t siz;
 
 		if ((p = mmap(NULL, (size_t)size, PROT_READ, MAP_PRIVATE,
 		    from_fd, (off_t)0)) == MAP_FAILED) {
@@ -425,8 +428,7 @@ copy(int from_fd, char *from_name, int to_fd, char *to_name, off_t size,
 			(void)unlink(to_name);
 			errx(EX_OSERR, "%s: %s", from_name, strerror(serrno));
 		}
-		if (size)
-			madvise(p, size, MADV_SEQUENTIAL);
+		madvise(p, size, MADV_SEQUENTIAL);
 		siz = (size_t)size;
 		if ((nw = write(to_fd, p, siz)) != siz) {
 			serrno = errno;
@@ -484,8 +486,11 @@ compare(int from_fd, const char *from_name, size_t from_len, int to_fd,
 	off_t from_off, to_off;
 	int dfound;
 
+	if (from_len == 0 && from_len == to_len)
+		return (0);
+
 	if (from_len != to_len)
-		return(1);
+		return (1);
 
 	/*
 	 * Compare the two files being careful not to mmap

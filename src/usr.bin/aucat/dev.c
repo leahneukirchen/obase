@@ -1,4 +1,4 @@
-/*	$OpenBSD: dev.c,v 1.76 2012/01/26 09:07:03 ratchov Exp $	*/
+/*	$OpenBSD: dev.c,v 1.80 2012/05/23 19:14:02 ratchov Exp $	*/
 /*
  * Copyright (c) 2008 Alexandre Ratchov <alex@caoua.org>
  *
@@ -89,7 +89,7 @@ void dev_onmove(void *, int);
 int  devctl_open(struct dev *, struct devctl *);
 
 struct dev *dev_list = NULL;
-unsigned dev_sndnum = 0, dev_thrnum = 0;
+unsigned int dev_sndnum = 0, dev_thrnum = 0;
 
 #ifdef DEBUG
 void
@@ -109,17 +109,12 @@ dev_dbg(struct dev *d)
  * Create a sndio device
  */
 struct dev *
-dev_new(char *path, unsigned mode,
-    unsigned bufsz, unsigned round, unsigned hold, unsigned autovol)
+dev_new(char *path, unsigned int mode, unsigned int bufsz, unsigned int round,
+    unsigned int hold, unsigned int autovol)
 {
 	struct dev *d;
-	unsigned *pnum, i;
+	unsigned int *pnum, i;
 
-	d = malloc(sizeof(struct dev));
-	if (d == NULL) {
-		perror("malloc");
-		exit(1);
-	}
 	pnum = (mode & MODE_THRU) ? &dev_thrnum : &dev_sndnum;
 	if (*pnum == DEV_NMAX) {
 #ifdef DEBUG
@@ -127,6 +122,11 @@ dev_new(char *path, unsigned mode,
 			dbg_puts("too many devices\n");
 #endif
 		return NULL;
+	}
+	d = malloc(sizeof(struct dev));
+	if (d == NULL) {
+		perror("malloc");
+		exit(1);
 	}
 	d->num = (*pnum)++;
 	if (mode & MODE_THRU)
@@ -152,6 +152,7 @@ dev_new(char *path, unsigned mode,
 		d->slot[i].serial = d->serial++;
 		d->slot[i].name[0] = '\0';
 	}
+	d->master = MIDI_MAXCTL;
 	d->origin = 0;
 	d->tstate = CTL_STOP;
 	d->next = dev_list;
@@ -163,7 +164,7 @@ dev_new(char *path, unsigned mode,
  * adjust device parameters and mode
  */
 void
-dev_adjpar(struct dev *d, unsigned mode,
+dev_adjpar(struct dev *d, unsigned int mode,
     struct aparams *ipar, struct aparams *opar)
 {
 	d->reqmode |= (mode | MODE_MIDIMASK);
@@ -197,7 +198,7 @@ dev_init(struct dev *d)
  * Add a MIDI port to the device
  */
 int
-devctl_add(struct dev *d, char *path, unsigned mode)
+devctl_add(struct dev *d, char *path, unsigned int mode)
 {
 	struct devctl *c;
 
@@ -254,7 +255,7 @@ dev_open(struct dev *d)
 	struct aparams par;
 	struct aproc *conv;
 	struct abuf *buf;
-	unsigned siomode, cmin, cmax, rate;
+	unsigned int siomode, cmin, cmax, rate;
 	
 	d->mode = d->reqmode;
 	d->round = d->reqround;
@@ -404,7 +405,8 @@ dev_open(struct dev *d)
 	 * Create mixer, demuxer and monitor
 	 */
 	if (d->mode & MODE_PLAY) {
-		d->mix = mix_new("play", d->bufsz, d->round, d->autovol);
+		d->mix = mix_new("play", d->bufsz, d->round,
+		    d->autovol, MIDI_TO_ADATA(d->master));
 		d->mix->refs++;
 	}
 	if (d->mode & MODE_REC) {
@@ -664,7 +666,7 @@ dev_close(struct dev *d)
 void
 dev_drain(struct dev *d)
 {
-	unsigned i;
+	unsigned int i;
 	struct ctl_slot *s;
 
 	for (i = 0, s = d->slot; i < CTL_NSLOT; i++, s++) {
@@ -713,8 +715,8 @@ dev_midiattach(struct dev *d, struct abuf *ibuf, struct abuf *obuf)
 	}
 }
 
-unsigned
-dev_roundof(struct dev *d, unsigned newrate)
+unsigned int
+dev_roundof(struct dev *d, unsigned int newrate)
 {
 	return (d->round * newrate + d->rate / 2) / d->rate;
 }
@@ -900,7 +902,7 @@ dev_wakeup(struct dev *d)
  */
 int
 dev_getep(struct dev *d,
-    unsigned mode, struct abuf **sibuf, struct abuf **sobuf)
+    unsigned int mode, struct abuf **sibuf, struct abuf **sobuf)
 {
 	struct abuf *ibuf, *obuf;
 
@@ -972,7 +974,8 @@ dev_getep(struct dev *d,
  * them underruns/overruns).
  */
 void
-dev_sync(struct dev *d, unsigned mode, struct abuf *ibuf, struct abuf *obuf)
+dev_sync(struct dev *d, unsigned int mode,
+    struct abuf *ibuf, struct abuf *obuf)
 {
 	int delta, offs;
 	struct abuf *mbuf = NULL;
@@ -1024,7 +1027,7 @@ dev_sync(struct dev *d, unsigned mode, struct abuf *ibuf, struct abuf *obuf)
  * return the current latency (in frames), ie the latency that
  * a stream would have if dev_attach() is called on it.
  *
- * XXX: return a "unsigned", since result is always positive, isn't it?
+ * XXX: return a "unsigned int", since result is always positive, isn't it?
  */
 int
 dev_getpos(struct dev *d)
@@ -1045,14 +1048,14 @@ dev_getpos(struct dev *d)
  * and rec.
  */
 void
-dev_attach(struct dev *d, char *name, unsigned mode,
-    struct abuf *ibuf, struct aparams *sipar, unsigned inch,
-    struct abuf *obuf, struct aparams *sopar, unsigned onch,
-    unsigned xrun, int vol)
+dev_attach(struct dev *d, char *name, unsigned int mode,
+    struct abuf *ibuf, struct aparams *sipar, unsigned int inch,
+    struct abuf *obuf, struct aparams *sopar, unsigned int onch,
+    unsigned int xrun, int vol)
 {
 	struct aparams ipar, opar;
 	struct aproc *conv;
-	unsigned round, nblk, nch;
+	unsigned int round, nblk, nch;
 
 #ifdef DEBUG
 	if ((!APROC_OK(d->mix)    && (mode & MODE_PLAY)) ||
@@ -1322,8 +1325,8 @@ dev_mkslot(struct dev *d, char *who)
 	char *s;
 	struct ctl_slot *slot;
 	char name[CTL_NAMEMAX];
-	unsigned i, unit, umap = 0;
-	unsigned ser, bestser, bestidx;
+	unsigned int i, unit, umap = 0;
+	unsigned int ser, bestser, bestidx;
 
 	/*
 	 * create a ``valid'' control name (lowcase, remove [^a-z], trucate)
@@ -1347,7 +1350,7 @@ dev_mkslot(struct dev *d, char *who)
 		if (slot->ops == NULL)
 			continue;
 		if (strcmp(slot->name, name) == 0)
-			umap |= (1 << i);
+			umap |= (1 << slot->unit);
 	} 
 	for (unit = 0; ; unit++) {
 		if (unit == CTL_NSLOT) {
@@ -1481,7 +1484,7 @@ dev_slotdel(struct dev *d, int slot)
  *	can work because all streams have a slot
  */
 void
-dev_slotvol(struct dev *d, int slot, unsigned vol)
+dev_slotvol(struct dev *d, int slot, unsigned int vol)
 {
 #ifdef DEBUG
 	if (debug_level >= 3) {
@@ -1505,7 +1508,7 @@ dev_slotvol(struct dev *d, int slot, unsigned vol)
 int
 dev_try(struct dev *d, int slot)
 {
-	unsigned i;
+	unsigned int i;
 	struct ctl_slot *s;
 
 	if (d->tstate != CTL_START) {
@@ -1622,7 +1625,7 @@ dev_mmcstart(struct dev *d)
 void
 dev_mmcstop(struct dev *d)
 {
-	unsigned i;
+	unsigned int i;
 	struct ctl_slot *s;
 
 	switch (d->tstate) {
@@ -1660,9 +1663,9 @@ dev_mmcstop(struct dev *d)
  * relocate all slots simultaneously
  */
 void
-dev_loc(struct dev *d, unsigned origin)
+dev_loc(struct dev *d, unsigned int origin)
 {
-	unsigned i;
+	unsigned int i;
 	struct ctl_slot *s;
 
 #ifdef DEBUG
@@ -1700,6 +1703,28 @@ dev_onmove(void *arg, int delta)
 		return;
 	if (APROC_OK(d->midi)) {
 		midi_send_qfr(d->midi, d->rate, delta);
+		midi_flush(d->midi);
+	}
+}
+
+void
+dev_master(struct dev *d, unsigned int master)
+{
+#ifdef DEBUG
+	if (debug_level >= 3) {
+		dev_dbg(d);
+		dbg_puts(": changing master volume to ");
+		dbg_putu(master);
+		dbg_puts("\n");
+	}
+#endif
+	d->master = master;
+	if (APROC_OK(d->mix)) {
+		d->mix->u.mix.master = MIDI_TO_ADATA(master);
+		mix_setmaster(d->mix);
+	}
+	if (APROC_OK(d->midi)) {
+		midi_send_master(d->midi);
 		midi_flush(d->midi);
 	}
 }

@@ -1,4 +1,4 @@
-/*	$OpenBSD: funmap.c,v 1.35 2011/11/28 04:41:39 lum Exp $	*/
+/*	$OpenBSD: funmap.c,v 1.38 2012/04/12 04:47:59 lum Exp $	*/
 
 /* This file is in the public domain */
 
@@ -20,9 +20,7 @@ struct funmap {
 static struct funmap *funs;
 
 static struct funmap functnames[] = {
-#ifndef	NO_HELP
 	{apropos_command, "apropos",},
-#endif /* !NO_HELP */
 	{auto_execute, "auto-execute", },
 	{fillmode, "auto-fill-mode",},
 	{indentmode, "auto-indent-mode",},
@@ -37,9 +35,7 @@ static struct funmap functnames[] = {
 	{bsmap, "bsmap-mode",},
 	{NULL, "c-x 4 prefix",},
 	{NULL, "c-x prefix",},
-#ifndef NO_MACRO
 	{executemacro, "call-last-kbd-macro",},
-#endif /* !NO_MACRO */
 	{capword, "capitalize-word",},
 	{changedir, "cd",},
 	{clearmark, "clear-mark",},
@@ -61,26 +57,20 @@ static struct funmap functnames[] = {
 #endif /* REGEX */
 	{onlywind, "delete-other-windows",},
 	{delwind, "delete-window",},
-#ifndef NO_HELP
 	{wallchart, "describe-bindings",},
 	{desckey, "describe-key-briefly",},
-#endif /* !NO_HELP */
 	{digit_argument, "digit-argument",},
 	{lowerregion, "downcase-region",},
 	{lowerword, "downcase-word",},
 	{showversion, "emacs-version",},
-#ifndef NO_MACRO
 	{finishmacro, "end-kbd-macro",},
-#endif /* !NO_MACRO */
 	{globalwdtoggle, "global-wd-mode",},
 	{gotoeob, "end-of-buffer",},
 	{gotoeol, "end-of-line",},
 	{enlargewind, "enlarge-window",},
 	{NULL, "esc prefix",},
-#ifndef NO_STARTUP
 	{evalbuffer, "eval-current-buffer",},
 	{evalexpr, "eval-expression",},
-#endif /* !NO_STARTUP */
 	{swapmark, "exchange-point-and-mark",},
 	{extend, "execute-extended-command",},
 	{fillpara, "fill-paragraph",},
@@ -94,9 +84,7 @@ static struct funmap functnames[] = {
 	{bindtokey, "global-set-key",},
 	{unbindtokey, "global-unset-key",},
 	{gotoline, "goto-line",},
-#ifndef NO_HELP
 	{help_help, "help-help",},
-#endif /* !NO_HELP */
 	{insert, "insert",},
 	{bufferinsert, "insert-buffer",},
 	{fileinsert, "insert-file",},
@@ -113,12 +101,11 @@ static struct funmap functnames[] = {
 	{delfword, "kill-word",},
 	{linenotoggle, "line-number-mode",},
 	{listbuffers, "list-buffers",},
-#ifndef NO_STARTUP
 	{evalfile, "load",},
-#endif /* !NO_STARTUP */
 	{localbind, "local-set-key",},
 	{localunbind, "local-unset-key",},
 	{makebkfile, "make-backup-files",},
+	{markbuffer, "mark-whole-buffer",},
 	{do_meta, "meta-key-mode",},	/* better name, anyone? */
 	{negative_argument, "negative-argument",},
 	{newline, "newline",},
@@ -172,14 +159,13 @@ static struct funmap functnames[] = {
 	{setfillcol, "set-fill-column",},
 	{setmark, "set-mark-command",},
 	{setprefix, "set-prefix-string",},
+	{piperegion, "shell-command-on-region",},
 	{shrinkwind, "shrink-window",},
 #ifdef NOTAB
 	{space_to_tabstop, "space-to-tabstop",},
 #endif /* NOTAB */
 	{splitwind, "split-window-vertically",},
-#ifndef NO_MACRO
 	{definemacro, "start-kbd-macro",},
-#endif /* !NO_MACRO */
 	{spawncli, "suspend-emacs",},
 	{usebuffer, "switch-to-buffer",},
 	{poptobuffer, "switch-to-buffer-other-window",},

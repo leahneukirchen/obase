@@ -1,4 +1,4 @@
-/*	$OpenBSD: job.c,v 1.120 2010/07/19 19:46:44 espie Exp $	*/
+/*	$OpenBSD: job.c,v 1.122 2012/04/11 18:27:30 espie Exp $	*/
 /*	$NetBSD: job.c,v 1.16 1996/11/06 17:59:08 christos Exp $	*/
 
 /*
@@ -265,9 +265,9 @@ print_errors()
 			type = "Should not happen";
 			break;
 		}
-	if (p->n->lineno)
+	if (p->n->origin.lineno)
 		Error(" %s %d (%s, line %lu of %s)",
-		    type, p->code, p->n->name, p->n->lineno, p->n->fname);
+		    type, p->code, p->n->name, p->n->origin.lineno, p->n->origin.fname);
 	else
 		Error(" %s %d (%s)", type, p->code, p->n->name);
 	}
@@ -836,9 +836,12 @@ prepare_job(GNode *gn, int flags)
 		 * by the caller are also added to the field.
 		 */
 		job->flags = flags;
-		if (expensive_commands(&gn->expanded)) {
+
+		if (gn->type & OP_CHEAP)
+			return job;
+		if ((gn->type & OP_EXPENSIVE) || 
+		    expensive_commands(&gn->expanded))
 			job->flags |= JOB_IS_EXPENSIVE;
-		}
 
 		return job;
 	}

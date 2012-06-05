@@ -1,4 +1,4 @@
-/*	$OpenBSD: listen.c,v 1.17 2011/10/12 07:20:04 ratchov Exp $	*/
+/*	$OpenBSD: listen.c,v 1.19 2012/04/11 06:05:43 ratchov Exp $	*/
 /*
  * Copyright (c) 2008 Alexandre Ratchov <alex@caoua.org>
  *
@@ -96,9 +96,9 @@ listen_new_un(char *path)
 }
 
 void
-listen_new_tcp(char *addr, unsigned port)
+listen_new_tcp(char *addr, unsigned int port)
 {
-	char *host, serv[sizeof(unsigned) * 3 + 1];
+	char *host, serv[sizeof(unsigned int) * 3 + 1];
 	struct addrinfo *ailist, *ai, aihints;
 	struct listen *f;
 	int s, error, opt = 1, n = 0;
@@ -174,6 +174,8 @@ listen_pollfd(struct file *file, struct pollfd *pfd, int events)
 {
 	struct listen *f = (struct listen *)file;
 
+	if (file_slowaccept)
+		return 0;
 	pfd->fd = f->fd;
 	pfd->events = POLLIN;
 	return 1;
@@ -189,10 +191,13 @@ listen_revents(struct file *file, struct pollfd *pfd)
 
 	if (pfd->revents & POLLIN) {
 		caddrlen = sizeof(caddrlen);
-		sock = accept(f->fd, &caddr, &caddrlen);
-		if (sock < 0) {
-			/* XXX: should we kill the socket here ? */
-			perror("accept");
+		while ((sock = accept(f->fd, &caddr, &caddrlen)) < 0) {
+			if (errno == EINTR)
+				continue;
+			if (errno == ENFILE || errno == EMFILE)
+				file_slowaccept = 1;
+			else
+				perror("accept");
 			return 0;
 		}
 		if (fcntl(sock, F_SETFL, O_NONBLOCK) < 0) {

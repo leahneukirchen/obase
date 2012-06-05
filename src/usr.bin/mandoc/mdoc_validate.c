@@ -1,7 +1,7 @@
-/*	$Id: mdoc_validate.c,v 1.100 2011/12/03 22:47:27 schwarze Exp $ */
+/*	$Id: mdoc_validate.c,v 1.102 2012/05/24 23:33:23 schwarze Exp $ */
 /*
- * Copyright (c) 2008, 2009, 2010, 2011 Kristaps Dzonsons <kristaps@bsd.lv>
- * Copyright (c) 2010, 2011 Ingo Schwarze <schwarze@openbsd.org>
+ * Copyright (c) 2008-2012 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2010, 2011, 2012 Ingo Schwarze <schwarze@openbsd.org>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -657,8 +657,13 @@ pre_bl(PRE_ARGS)
 			comp = 1;
 			break;
 		case (MDOC_Width):
-			dup = (NULL != n->norm->Bl.width);
-			width = n->args->argv[i].value[0];
+			/* NB: this can be empty! */
+			if (n->args->argv[i].sz) {
+				width = n->args->argv[i].value[0];
+				dup = (NULL != n->norm->Bl.width);
+				break;
+			}
+			mdoc_nmsg(mdoc, n, MANDOCERR_IGNARGV);
 			break;
 		case (MDOC_Offset):
 			/* NB: this can be empty! */
@@ -2183,14 +2188,15 @@ post_os(POST_ARGS)
 	n = mdoc->last;
 
 	/*
-	 * Set the operating system by way of the `Os' macro.  Note that
-	 * if an argument isn't provided and -DOSNAME="\"foo\"" is
-	 * provided during compilation, this value will be used instead
-	 * of filling in "sysname release" from uname().
+	 * Set the operating system by way of the `Os' macro.
+	 * The order of precedence is:
+	 * 1. the argument of the `Os' macro, unless empty
+	 * 2. the -Ios=foo command line argument, if provided
+	 * 3. -DOSNAME="\"foo\"", if provided during compilation
+	 * 4. "sysname release" from uname(3)
  	 */
 
-	if (mdoc->meta.os)
-		free(mdoc->meta.os);
+	free(mdoc->meta.os);
 
 	buf[0] = '\0';
 	if (-1 == (c = concat(buf, n->child, BUFSIZ))) {
@@ -2200,11 +2206,11 @@ post_os(POST_ARGS)
 
 	assert(c);
 
-	/* XXX: yes, these can all be dynamically-adjusted buffers, but
-	 * it's really not worth the extra hackery.
-	 */
-
 	if ('\0' == buf[0]) {
+		if (mdoc->defos) {
+			mdoc->meta.os = mandoc_strdup(mdoc->defos);
+			return(1);
+		}
 #ifdef OSNAME
 		if (strlcat(buf, OSNAME, BUFSIZ) >= BUFSIZ) {
 			mdoc_nmsg(mdoc, n, MANDOCERR_MEM);
