@@ -1,4 +1,4 @@
-/*	$Id: mandoc.h,v 1.43 2011/11/12 22:43:18 schwarze Exp $ */
+/*	$Id: mandoc.h,v 1.46 2012/05/28 13:00:51 schwarze Exp $ */
 /*
  * Copyright (c) 2010, 2011 Kristaps Dzonsons <kristaps@bsd.lv>
  *
@@ -175,20 +175,14 @@ struct	tbl {
 	int		  cols; /* number of columns */
 };
 
-enum	tbl_headt {
-	TBL_HEAD_DATA, /* plug in data from tbl_dat */
-	TBL_HEAD_VERT, /* vertical spacer */
-	TBL_HEAD_DVERT  /* double-vertical spacer */
-};
-
 /*
  * The head of a table specifies all of its columns.  When formatting a
  * tbl_span, iterate over these and plug in data from the tbl_span when
  * appropriate, using tbl_cell as a guide to placement.
  */
 struct	tbl_head {
-	enum tbl_headt	  pos;
 	int		  ident; /* 0 <= unique id < cols */
+	int		  vert; /* width of preceding vertical line */
 	struct tbl_head	 *next;
 	struct tbl_head	 *prev;
 };
@@ -203,8 +197,6 @@ enum	tbl_cellt {
 	TBL_CELL_DOWN, /* ^ */
 	TBL_CELL_HORIZ, /* _, - */
 	TBL_CELL_DHORIZ, /* = */
-	TBL_CELL_VERT, /* | */
-	TBL_CELL_DVERT, /* || */
 	TBL_CELL_MAX
 };
 
@@ -213,6 +205,7 @@ enum	tbl_cellt {
  */
 struct	tbl_cell {
 	struct tbl_cell	 *next;
+	int		  vert; /* width of preceding vertical line */
 	enum tbl_cellt	  pos;
 	size_t		  spacing;
 	int		  flags;
@@ -386,7 +379,8 @@ enum	mandoc_esc {
 	ESCAPE_FONTPREV, /* previous font mode */
 	ESCAPE_NUMBERED, /* a numbered glyph */
 	ESCAPE_UNICODE, /* a unicode codepoint */
-	ESCAPE_NOSPACE /* suppress space if the last on a line */
+	ESCAPE_NOSPACE, /* suppress space if the last on a line */
+	ESCAPE_SKIPCHAR /* skip the next character */
 };
 
 typedef	void	(*mandocmsg)(enum mandocerr, enum mandoclevel,
@@ -413,8 +407,8 @@ int		  mchars_spec2cp(const struct mchars *,
 			const char *, size_t);
 const char	 *mchars_spec2str(const struct mchars *, 
 			const char *, size_t, size_t *);
-struct mparse	 *mparse_alloc(enum mparset, 
-			enum mandoclevel, mandocmsg, void *);
+struct mparse	 *mparse_alloc(enum mparset, enum mandoclevel,
+			mandocmsg, void *, char *);
 void		  mparse_free(struct mparse *);
 void		  mparse_keep(struct mparse *);
 enum mandoclevel  mparse_readfd(struct mparse *, int, const char *);

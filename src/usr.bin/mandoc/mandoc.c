@@ -1,7 +1,7 @@
-/*	$Id: mandoc.c,v 1.31 2011/11/17 11:58:11 schwarze Exp $ */
+/*	$Id: mandoc.c,v 1.34 2012/05/28 22:45:33 schwarze Exp $ */
 /*
  * Copyright (c) 2008, 2009, 2010, 2011 Kristaps Dzonsons <kristaps@bsd.lv>
- * Copyright (c) 2011 Ingo Schwarze <schwarze@openbsd.org>
+ * Copyright (c) 2011, 2012 Ingo Schwarze <schwarze@openbsd.org>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -33,83 +33,38 @@
 
 static	int	 a2time(time_t *, const char *, const char *);
 static	char	*time2a(time_t);
-static	int	 numescape(const char *);
 
-/*
- * Pass over recursive numerical expressions.  This context of this
- * function is important: it's only called within character-terminating
- * escapes (e.g., \s[xxxyyy]), so all we need to do is handle initial
- * recursion: we don't care about what's in these blocks. 
- * This returns the number of characters skipped or -1 if an error
- * occurs (the caller should bail).
- */
-static int
-numescape(const char *start)
-{
-	int		 i;
-	size_t		 sz;
-	const char	*cp;
-
-	i = 0;
-
-	/* The expression consists of a subexpression. */
-
-	if ('\\' == start[i]) {
-		cp = &start[++i];
-		/*
-		 * Read past the end of the subexpression.
-		 * Bail immediately on errors.
-		 */
-		if (ESCAPE_ERROR == mandoc_escape(&cp, NULL, NULL))
-			return(-1);
-		return(i + cp - &start[i]);
-	} 
-
-	if ('(' != start[i++])
-		return(0);
-
-	/*
-	 * A parenthesised subexpression.  Read until the closing
-	 * parenthesis, making sure to handle any nested subexpressions
-	 * that might ruin our parse.
-	 */
-
-	while (')' != start[i]) {
-		sz = strcspn(&start[i], ")\\");
-		i += (int)sz;
-
-		if ('\0' == start[i])
-			return(-1);
-		else if ('\\' != start[i])
-			continue;
-
-		cp = &start[++i];
-		if (ESCAPE_ERROR == mandoc_escape(&cp, NULL, NULL))
-			return(-1);
-		i += cp - &start[i];
-	}
-
-	/* Read past the terminating ')'. */
-	return(++i);
-}
 
 enum mandoc_esc
 mandoc_escape(const char **end, const char **start, int *sz)
 {
-	char		 c, term, numeric;
-	int		 i, lim, ssz, rlim;
-	const char	*cp, *rstart;
+	const char	*local_start;
+	int		 local_sz;
+	char		 term;
 	enum mandoc_esc	 gly; 
 
-	cp = *end;
-	rstart = cp;
-	if (start)
-		*start = rstart;
-	i = lim = 0;
-	gly = ESCAPE_ERROR;
-	term = numeric = '\0';
+	/*
+	 * When the caller doesn't provide return storage,
+	 * use local storage.
+	 */
 
-	switch ((c = cp[i++])) {
+	if (NULL == start)
+		start = &local_start;
+	if (NULL == sz)
+		sz = &local_sz;
+
+	/*
+	 * Beyond the backslash, at least one input character
+	 * is part of the escape sequence.  With one exception
+	 * (see below), that character won't be returned.
+	 */
+
+	gly = ESCAPE_ERROR;
+	*start = ++*end;
+	*sz = 0;
+	term = '\0';
+
+	switch ((*start)[-1]) {
 	/*
 	 * First the glyphs.  There are several different forms of
 	 * these, but each eventually returns a substring of the glyph
@@ -117,7 +72,7 @@ mandoc_escape(const char **end, const char **start, int *sz)
 	 */
 	case ('('):
 		gly = ESCAPE_SPECIAL;
-		lim = 2;
+		*sz = 2;
 		break;
 	case ('['):
 		gly = ESCAPE_SPECIAL;
@@ -127,16 +82,26 @@ mandoc_escape(const char **end, const char **start, int *sz)
 		 * Unicode codepoint.  Here, however, only check whether
 		 * it's not a zero-width escape.
 		 */
-		if ('u' == cp[i] && ']' != cp[i + 1])
+		if ('u' == (*start)[0] && ']' != (*start)[1])
 			gly = ESCAPE_UNICODE;
 		term = ']';
 		break;
 	case ('C'):
-		if ('\'' != cp[i])
+		if ('\'' != **start)
 			return(ESCAPE_ERROR);
 		gly = ESCAPE_SPECIAL;
+		*start = ++*end;
 		term = '\'';
 		break;
+
+	/*
+	 * The \z escape is supposed to output the following
+	 * character without advancing the cursor position.  
+	 * Since we are mostly dealing with terminal mode,
+	 * let us just skip the next character.
+	 */
+	case ('z'):
+		return(ESCAPE_SKIPCHAR);
 
 	/*
 	 * Handle all triggers matching \X(xy, \Xx, and \X[xxxx], where
@@ -162,21 +127,17 @@ mandoc_escape(const char **end, const char **start, int *sz)
 	case ('f'):
 		if (ESCAPE_ERROR == gly)
 			gly = ESCAPE_FONT;
-
-		rstart= &cp[i];
-		if (start) 
-			*start = rstart;
-
-		switch (cp[i++]) {
+		switch (**start) {
 		case ('('):
-			lim = 2;
+			*start = ++*end;
+			*sz = 2;
 			break;
 		case ('['):
+			*start = ++*end;
 			term = ']';
 			break;
 		default:
-			lim = 1;
-			i--;
+			*sz = 1;
 			break;
 		}
 		break;
@@ -198,9 +159,10 @@ mandoc_escape(const char **end, const char **start, int *sz)
 	case ('X'):
 		/* FALLTHROUGH */
 	case ('Z'):
-		if ('\'' != cp[i++])
+		if ('\'' != **start)
 			return(ESCAPE_ERROR);
 		gly = ESCAPE_IGNORE;
+		*start = ++*end;
 		term = '\'';
 		break;
 
@@ -226,11 +188,12 @@ mandoc_escape(const char **end, const char **start, int *sz)
 	case ('w'):
 		/* FALLTHROUGH */
 	case ('x'):
+		if ('\'' != **start)
+			return(ESCAPE_ERROR);
 		if (ESCAPE_ERROR == gly)
 			gly = ESCAPE_IGNORE;
-		if ('\'' != cp[i++])
-			return(ESCAPE_ERROR);
-		term = numeric = '\'';
+		*start = ++*end;
+		term = '\'';
 		break;
 
 	/*
@@ -238,17 +201,17 @@ mandoc_escape(const char **end, const char **start, int *sz)
 	 * XXX Do any other escapes need similar handling?
 	 */
 	case ('N'):
-		if ('\0' == cp[i])
+		if ('\0' == **start)
 			return(ESCAPE_ERROR);
-		*end = &cp[++i];
-		if (isdigit((unsigned char)cp[i-1]))
+		(*end)++;
+		if (isdigit((unsigned char)**start)) {
+			*sz = 1;
 			return(ESCAPE_IGNORE);
+		}
+		(*start)++;
 		while (isdigit((unsigned char)**end))
 			(*end)++;
-		if (start)
-			*start = &cp[i];
-		if (sz)
-			*sz = *end - &cp[i];
+		*sz = *end - *start;
 		if ('\0' != **end)
 			(*end)++;
 		return(ESCAPE_NUMBERED);
@@ -259,107 +222,71 @@ mandoc_escape(const char **end, const char **start, int *sz)
 	case ('s'):
 		gly = ESCAPE_IGNORE;
 
-		rstart = &cp[i];
-		if (start) 
-			*start = rstart;
-
 		/* See +/- counts as a sign. */
-		c = cp[i];
-		if ('+' == c || '-' == c || ASCII_HYPH == c)
-			++i;
+		if ('+' == **end || '-' == **end || ASCII_HYPH == **end)
+			(*end)++;
 
-		switch (cp[i++]) {
+		switch (**end) {
 		case ('('):
-			lim = 2;
+			*start = ++*end;
+			*sz = 2;
 			break;
 		case ('['):
-			term = numeric = ']';
+			*start = ++*end;
+			term = ']';
 			break;
 		case ('\''):
-			term = numeric = '\'';
+			*start = ++*end;
+			term = '\'';
 			break;
 		default:
-			lim = 1;
-			i--;
+			*sz = 1;
 			break;
 		}
-
-		/* See +/- counts as a sign. */
-		c = cp[i];
-		if ('+' == c || '-' == c || ASCII_HYPH == c)
-			++i;
 
 		break;
 
 	/*
 	 * Anything else is assumed to be a glyph.
+	 * In this case, pass back the character after the backslash.
 	 */
 	default:
 		gly = ESCAPE_SPECIAL;
-		lim = 1;
-		i--;
+		*start = --*end;
+		*sz = 1;
 		break;
 	}
 
 	assert(ESCAPE_ERROR != gly);
 
-	rstart = &cp[i];
-	if (start)
-		*start = rstart;
-
 	/*
-	 * If a terminating block has been specified, we need to
-	 * handle the case of recursion, which could have their
-	 * own terminating blocks that mess up our parse.  This, by the
-	 * way, means that the "start" and "size" values will be
-	 * effectively meaningless.
-	 */
-
-	ssz = 0;
-	if (numeric && -1 == (ssz = numescape(&cp[i])))
-		return(ESCAPE_ERROR);
-
-	i += ssz;
-	rlim = -1;
-
-	/*
-	 * We have a character terminator.  Try to read up to that
-	 * character.  If we can't (i.e., we hit the nil), then return
-	 * an error; if we can, calculate our length, read past the
-	 * terminating character, and exit.
+	 * Read up to the terminating character,
+	 * paying attention to nested escapes.
 	 */
 
 	if ('\0' != term) {
-		*end = strchr(&cp[i], term);
-		if ('\0' == *end)
+		while (**end != term) {
+			switch (**end) {
+			case ('\0'):
+				return(ESCAPE_ERROR);
+			case ('\\'):
+				(*end)++;
+				if (ESCAPE_ERROR ==
+				    mandoc_escape(end, NULL, NULL))
+					return(ESCAPE_ERROR);
+				break;
+			default:
+				(*end)++;
+				break;
+			}
+		}
+		*sz = (*end)++ - *start;
+	} else {
+		assert(*sz > 0);
+		if ((size_t)*sz > strlen(*start))
 			return(ESCAPE_ERROR);
-
-		rlim = *end - &cp[i];
-		if (sz)
-			*sz = rlim;
-		(*end)++;
-		goto out;
+		*end += *sz;
 	}
-
-	assert(lim > 0);
-
-	/*
-	 * We have a numeric limit.  If the string is shorter than that,
-	 * stop and return an error.  Else adjust our endpoint, length,
-	 * and return the current glyph.
-	 */
-
-	if ((size_t)lim > strlen(&cp[i]))
-		return(ESCAPE_ERROR);
-
-	rlim = lim;
-	if (sz)
-		*sz = rlim;
-
-	*end = &cp[i] + lim;
-
-out:
-	assert(rlim >= 0 && rstart);
 
 	/* Run post-processors. */
 
@@ -369,12 +296,13 @@ out:
 		 * Pretend that the constant-width font modes are the
 		 * same as the regular font modes.
 		 */
-		if (2 == rlim && 'C' == *rstart)
-			rstart++;
-		else if (1 != rlim)
+		if (2 == *sz && 'C' == **start) {
+			(*start)++;
+			(*sz)--;
+		} else if (1 != *sz)
 			break;
 
-		switch (*rstart) {
+		switch (**start) {
 		case ('3'):
 			/* FALLTHROUGH */
 		case ('B'):
@@ -396,9 +324,7 @@ out:
 		}
 		break;
 	case (ESCAPE_SPECIAL):
-		if (1 != rlim)
-			break;
-		if ('c' == *rstart)
+		if (1 == *sz && 'c' == **start)
 			gly = ESCAPE_NOSPACE;
 		break;
 	default:

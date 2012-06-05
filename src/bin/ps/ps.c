@@ -1,4 +1,4 @@
-/*	$OpenBSD: ps.c,v 1.51 2011/10/13 01:15:04 guenther Exp $	*/
+/*	$OpenBSD: ps.c,v 1.55 2012/04/21 03:14:50 guenther Exp $	*/
 /*	$NetBSD: ps.c,v 1.15 1995/05/18 20:33:25 mycroft Exp $	*/
 
 /*-
@@ -74,6 +74,7 @@ static void	 scanvars(void);
 static void	 usage(void);
 
 char dfmt[] = "pid tt state time command";
+char tfmt[] = "pid tid tt state time command";
 char jfmt[] = "user pid ppid pgid sess jobc state tt time command";
 char lfmt[] = "uid pid ppid cpu pri nice vsz rss wchan state tt time command";
 char   o1[] = "pid";
@@ -265,8 +266,12 @@ main(int argc, char *argv[])
 	if (kd == NULL)
 		errx(1, "%s", errbuf);
 
-	if (!fmt)
-		parsefmt(dfmt);
+	if (!fmt) {
+		if (showthreads)
+			parsefmt(tfmt);
+		else
+			parsefmt(dfmt);
+	}
 
 	/* XXX - should be cleaner */
 	if (!all && ttydev == NODEV && pid == -1 && !Uflag) {
@@ -302,6 +307,8 @@ main(int argc, char *argv[])
 		what = KERN_PROC_ALL;
 		flag = 0;
 	}
+	if (showthreads)
+		what |= KERN_PROC_SHOW_THREADS;
 
 	/*
 	 * select procs
@@ -333,6 +340,8 @@ main(int argc, char *argv[])
 			continue;
 		if (xflg == 0 && ((int)kinfo[i]->p_tdev == NODEV ||
 		    (kinfo[i]->p_flag & P_CONTROLT ) == 0))
+			continue;
+		if (showthreads && kinfo[i]->p_tid == -1)
 			continue;
 		for (vent = vhead; vent; vent = vent->next) {
 			(vent->var->oproc)(kinfo[i], vent);

@@ -1,4 +1,4 @@
-/*	$Id: read.c,v 1.5 2011/11/05 16:02:18 schwarze Exp $ */
+/*	$Id: read.c,v 1.8 2012/06/02 23:18:30 schwarze Exp $ */
 /*
  * Copyright (c) 2008, 2009, 2010, 2011 Kristaps Dzonsons <kristaps@bsd.lv>
  * Copyright (c) 2010, 2011 Ingo Schwarze <schwarze@openbsd.org>
@@ -54,6 +54,7 @@ struct	mparse {
 	void		 *arg; /* argument to mmsg */
 	const char	 *file; 
 	struct buf	 *secondary;
+	char		 *defos; /* default operating system */
 };
 
 static	void	  resize_buf(struct buf *, size_t);
@@ -236,7 +237,8 @@ pset(const char *buf, int pos, struct mparse *curp)
 	switch (curp->inttype) {
 	case (MPARSE_MDOC):
 		if (NULL == curp->pmdoc) 
-			curp->pmdoc = mdoc_alloc(curp->roff, curp);
+			curp->pmdoc = mdoc_alloc(curp->roff, curp,
+					curp->defos);
 		assert(curp->pmdoc);
 		curp->mdoc = curp->pmdoc;
 		return;
@@ -252,7 +254,8 @@ pset(const char *buf, int pos, struct mparse *curp)
 
 	if (pos >= 3 && 0 == memcmp(buf, ".Dd", 3))  {
 		if (NULL == curp->pmdoc) 
-			curp->pmdoc = mdoc_alloc(curp->roff, curp);
+			curp->pmdoc = mdoc_alloc(curp->roff, curp,
+					curp->defos);
 		assert(curp->pmdoc);
 		curp->mdoc = curp->pmdoc;
 		return;
@@ -315,9 +318,9 @@ mparse_buf_r(struct mparse *curp, struct buf blk, int start)
 			 * Warn about bogus characters.  If you're using
 			 * non-ASCII encoding, you're screwing your
 			 * readers.  Since I'd rather this not happen,
-			 * I'll be helpful and drop these characters so
-			 * we don't display gibberish.  Note to manual
-			 * writers: use special characters.
+			 * I'll be helpful and replace these characters
+			 * with "?", so we don't display gibberish.
+			 * Note to manual writers: use special characters.
 			 */
 
 			c = (unsigned char) blk.buf[i];
@@ -325,8 +328,11 @@ mparse_buf_r(struct mparse *curp, struct buf blk, int start)
 			if ( ! (isascii(c) && 
 					(isgraph(c) || isblank(c)))) {
 				mandoc_msg(MANDOCERR_BADCHAR, curp,
-						curp->line, pos, "ignoring byte");
+						curp->line, pos, NULL);
 				i++;
+				if (pos >= (int)ln.sz)
+					resize_buf(&ln, 256);
+				ln.buf[pos++] = '?';
 				continue;
 			}
 
@@ -691,7 +697,8 @@ mparse_readfd(struct mparse *curp, int fd, const char *file)
 }
 
 struct mparse *
-mparse_alloc(enum mparset inttype, enum mandoclevel wlevel, mandocmsg mmsg, void *arg)
+mparse_alloc(enum mparset inttype, enum mandoclevel wlevel,
+		mandocmsg mmsg, void *arg, char *defos)
 {
 	struct mparse	*curp;
 
@@ -703,8 +710,9 @@ mparse_alloc(enum mparset inttype, enum mandoclevel wlevel, mandocmsg mmsg, void
 	curp->mmsg = mmsg;
 	curp->arg = arg;
 	curp->inttype = inttype;
+	curp->defos = defos;
 
-	curp->roff = roff_alloc(curp);
+	curp->roff = roff_alloc(inttype, curp);
 	return(curp);
 }
 

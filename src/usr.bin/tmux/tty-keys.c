@@ -1,4 +1,4 @@
-/* $OpenBSD: tty-keys.c,v 1.34 2011/03/04 23:26:44 nicm Exp $ */
+/* $OpenBSD: tty-keys.c,v 1.41 2012/05/22 14:32:28 nicm Exp $ */
 
 /*
  * Copyright (c) 2007 Nicholas Marriott <nicm@users.sourceforge.net>
@@ -19,6 +19,8 @@
 #include <sys/types.h>
 #include <sys/time.h>
 
+#include <limits.h>
+#include <stdlib.h>
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
@@ -38,8 +40,8 @@ struct tty_key *tty_keys_find1(
 		    struct tty_key *, const char *, size_t, size_t *);
 struct tty_key *tty_keys_find(struct tty *, const char *, size_t, size_t *);
 void		tty_keys_callback(int, short, void *);
-int		tty_keys_mouse(struct tty *,
-		    const char *, size_t, size_t *, struct mouse_event *);
+int		tty_keys_mouse(struct tty *, const char *, size_t, size_t *);
+int		tty_keys_device(struct tty *, const char *, size_t, size_t *);
 
 struct tty_key_ent {
 	enum tty_code_code	code;
@@ -431,13 +433,12 @@ tty_keys_find1(struct tty_key *tk, const char *buf, size_t len, size_t *size)
 int
 tty_keys_next(struct tty *tty)
 {
-	struct tty_key		*tk;
-	struct timeval		 tv;
-	struct mouse_event	 mouse;
-	const char		*buf;
-	size_t			 len, size;
-	cc_t			 bspace;
-	int			 key, delay;
+	struct tty_key	*tk;
+	struct timeval	 tv;
+	const char	*buf;
+	size_t		 len, size;
+	cc_t		 bspace;
+	int		 key, delay;
 
 	buf = EVBUFFER_DATA(tty->event->input);
 	len = EVBUFFER_LENGTH(tty->event->input);
@@ -461,8 +462,20 @@ tty_keys_next(struct tty *tty)
 		goto handle_key;
 	}
 
+	/* Is this device attributes response? */
+	switch (tty_keys_device(tty, buf, len, &size)) {
+	case 0:		/* yes */
+		evbuffer_drain(tty->event->input, size);
+		key = KEYC_NONE;
+		goto handle_key;
+	case -1:	/* no, or not valid */
+		break;
+	case 1:		/* partial */
+		goto partial_key;
+	}
+
 	/* Is this a mouse key press? */
-	switch (tty_keys_mouse(tty, buf, len, &size, &mouse)) {
+	switch (tty_keys_mouse(tty, buf, len, &size)) {
 	case 0:		/* yes */
 		evbuffer_drain(tty->event->input, size);
 		key = KEYC_MOUSE;
@@ -516,10 +529,11 @@ tty_keys_next(struct tty *tty)
 
 partial_key:
 	/*
-	 * Escape but no key string. If have already seen an escape, then the
-	 * timer must have expired, so give up waiting and send the escape.
+	 * Escape but no key string. If have already seen an escape and the
+	 * timer has expired, give up waiting and send the escape.
 	 */
-	if (tty->flags & TTY_ESCAPE) {
+	if ((tty->flags & TTY_ESCAPE) &&
+	    !evtimer_pending(&tty->key_timer, NULL)) {
 		evbuffer_drain(tty->event->input, 1);
 		key = '\033';
 		goto handle_key;
@@ -528,12 +542,17 @@ partial_key:
 	/* Fall through to start the timer. */
 
 start_timer:
+	/* If already waiting for timer, do nothing. */
+	if (evtimer_pending(&tty->key_timer, NULL))
+		return (0);
+
 	/* Start the timer and wait for expiry or more data. */
 	delay = options_get_number(&global_options, "escape-time");
 	tv.tv_sec = delay / 1000;
 	tv.tv_usec = (delay % 1000) * 1000L;
 
-	evtimer_del(&tty->key_timer);
+	if (event_initialized(&tty->key_timer))
+		evtimer_del(&tty->key_timer);
 	evtimer_set(&tty->key_timer, tty_keys_callback, tty);
 	evtimer_add(&tty->key_timer, &tv);
 
@@ -557,9 +576,11 @@ found_key:
 	goto handle_key;
 
 handle_key:
-	evtimer_del(&tty->key_timer);
+	if (event_initialized(&tty->key_timer))
+		evtimer_del(&tty->key_timer);
 
-	tty->key_callback(key, &mouse, tty->key_data);
+	if (key != KEYC_NONE)
+		server_client_handle_key(tty->client, key);
 
 	tty->flags &= ~TTY_ESCAPE;
 	return (1);
@@ -584,11 +605,11 @@ tty_keys_callback(unused int fd, unused short events, void *data)
  * (probably a mouse sequence but need more data).
  */
 int
-tty_keys_mouse(struct tty *tty,
-    const char *buf, size_t len, size_t *size, struct mouse_event *m)
+tty_keys_mouse(struct tty *tty, const char *buf, size_t len, size_t *size)
 {
-	struct utf8_data	utf8data;
-	u_int			i, value;
+	struct mouse_event	*m = &tty->mouse;
+	struct utf8_data	 utf8data;
+	u_int			 i, value;
 
 	/*
 	 * Standard mouse sequences are \033[M followed by three characters
@@ -653,5 +674,67 @@ tty_keys_mouse(struct tty *tty,
 	m->x -= 33;
 	m->y -= 33;
 	log_debug("mouse position: x=%u y=%u b=%u", m->x, m->y, m->b);
+	return (0);
+}
+
+/*
+ * Handle device attributes input. Returns 0 for success, -1 for failure, 1 for
+ * partial.
+ */
+int
+tty_keys_device(struct tty *tty, const char *buf, size_t len, size_t *size)
+{
+	u_int i, a, b;
+	char  tmp[64], *endptr;
+
+	/*
+	 * Primary device attributes are \033[?a;b and secondary are
+	 * \033[>a;b;c. We only request attributes on xterm, so we only care
+	 * about the middle values which is the xterm version.
+	 */
+
+	*size = 0;
+
+	/* First three bytes are always \033[>. */
+	if (buf[0] != '\033')
+		return (-1);
+	if (len == 1)
+		return (1);
+	if (buf[1] != '[')
+		return (-1);
+	if (len == 2)
+		return (1);
+	if (buf[2] != '>' && buf[2] != '?')
+		return (-1);
+	if (len == 3)
+		return (1);
+
+	/* Copy the rest up to a 'c'. */
+	for (i = 0; i < (sizeof tmp) - 1 && buf[3 + i] != 'c'; i++) {
+		if (3 + i == len)
+			return (1);
+		tmp[i] = buf[3 + i];
+	}
+	if (i == (sizeof tmp) - 1)
+		return (-1);
+	tmp[i] = '\0';
+	*size = 4 + i;
+
+	/* Only secondary is of interest. */
+	if (buf[2] != '>')
+		return (0);
+
+	/* Convert version numbers. */
+	a = strtoul(tmp, &endptr, 10);
+	if (*endptr == ';') {
+		b = strtoul(endptr + 1, &endptr, 10);
+		if (*endptr != '\0' && *endptr != ';')
+			b = 0;
+	} else
+		a = b = 0;
+
+	log_debug("received xterm version %u", b);
+	tty_set_version(tty, b);
+
 	return (0);
 }

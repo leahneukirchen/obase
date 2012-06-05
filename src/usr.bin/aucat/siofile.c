@@ -1,4 +1,4 @@
-/*	$OpenBSD: siofile.c,v 1.9 2011/11/20 22:54:51 ratchov Exp $	*/
+/*	$OpenBSD: siofile.c,v 1.11 2012/05/23 19:25:11 ratchov Exp $	*/
 /*
  * Copyright (c) 2008 Alexandre Ratchov <alex@caoua.org>
  *
@@ -38,9 +38,9 @@
 struct siofile {
 	struct file file;
 	struct sio_hdl *hdl;
-	unsigned wtickets, wbpf;
-	unsigned rtickets, rbpf;
-	unsigned bufsz;
+	unsigned int wtickets, wbpf;
+	unsigned int rtickets, rbpf;
+	unsigned int bufsz;
 	int started;
 	void (*onmove)(void *, int);
 	void *arg;
@@ -50,8 +50,8 @@ struct siofile {
 };
 
 void siofile_close(struct file *);
-unsigned siofile_read(struct file *, unsigned char *, unsigned);
-unsigned siofile_write(struct file *, unsigned char *, unsigned);
+unsigned int siofile_read(struct file *, unsigned char *, unsigned int);
+unsigned int siofile_write(struct file *, unsigned char *, unsigned int);
 void siofile_start(struct file *, void (*)(void *, int), void *);
 void siofile_stop(struct file *);
 int siofile_nfds(struct file *);
@@ -205,26 +205,24 @@ siofile_cb(void *addr, int delta)
  * Open the device.
  */
 struct siofile *
-siofile_new(struct fileops *ops, char *path, unsigned *rmode,
+siofile_new(struct fileops *ops, char *path, unsigned int *rmode,
     struct aparams *ipar, struct aparams *opar,
-    unsigned *bufsz, unsigned *round)
+    unsigned int *bufsz, unsigned int *round)
 {
-	char *siopath;
 	struct sio_par par;
 	struct sio_hdl *hdl;
 	struct siofile *f;
-	unsigned mode = *rmode;
+	unsigned int mode = *rmode;
 
-	siopath = (strcmp(path, "default") == 0) ? NULL : path;
-	hdl = sio_open(siopath, mode, 1);
+	hdl = sio_open(path, mode, 1);
 	if (hdl == NULL) {
 		if (mode != (SIO_PLAY | SIO_REC))
 			return NULL;
-		hdl = sio_open(siopath, SIO_PLAY, 1);
+		hdl = sio_open(path, SIO_PLAY, 1);
 		if (hdl != NULL)
 			mode = SIO_PLAY;
 		else {
-			hdl = sio_open(siopath, SIO_REC, 1);
+			hdl = sio_open(path, SIO_REC, 1);
 			if (hdl != NULL)
 				mode = SIO_REC;
 			else
@@ -357,11 +355,11 @@ siofile_stop(struct file *file)
 #endif
 }
 
-unsigned
-siofile_read(struct file *file, unsigned char *data, unsigned count)
+unsigned int
+siofile_read(struct file *file, unsigned char *data, unsigned int count)
 {
 	struct siofile *f = (struct siofile *)file;
-	unsigned n;
+	unsigned int n;
 
 #ifdef DEBUG
 	if (f->rtickets == 0) {
@@ -405,11 +403,11 @@ siofile_read(struct file *file, unsigned char *data, unsigned count)
 
 }
 
-unsigned
-siofile_write(struct file *file, unsigned char *data, unsigned count)
+unsigned int
+siofile_write(struct file *file, unsigned char *data, unsigned int count)
 {
 	struct siofile *f = (struct siofile *)file;
-	unsigned n;
+	unsigned int n;
 
 #ifdef DEBUG
 	if (f->wtickets == 0) {

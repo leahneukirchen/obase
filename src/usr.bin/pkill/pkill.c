@@ -1,4 +1,4 @@
-/*	$OpenBSD: pkill.c,v 1.21 2012/02/09 20:04:35 markus Exp $	*/
+/*	$OpenBSD: pkill.c,v 1.27 2012/04/21 03:14:50 guenther Exp $	*/
 /*	$NetBSD: pkill.c,v 1.5 2002/10/27 11:49:34 kleink Exp $	*/
 
 /*-
@@ -115,7 +115,6 @@ main(int argc, char **argv)
 	char buf[_POSIX2_LINE_MAX], *mstr, **pargv, *p, *q;
 	int i, j, ch, bestidx, rv, criteria;
 	int (*action)(struct kinfo_proc *, int);
-	int did_action;
 	struct kinfo_proc *kp;
 	struct list *li;
 	u_int32_t bestsec, bestusec;
@@ -255,7 +254,8 @@ main(int argc, char **argv)
 		}
 
 		for (i = 0, kp = plist; i < nproc; i++, kp++) {
-			if ((kp->p_flag & P_SYSTEM) != 0 || kp->p_pid == mypid)
+			if ((kp->p_flag & (P_SYSTEM | P_THREAD)) != 0 ||
+			     kp->p_pid == mypid)
 				continue;
 
 			if (matchargs) {
@@ -298,7 +298,8 @@ main(int argc, char **argv)
 	}
 
 	for (i = 0, kp = plist; i < nproc; i++, kp++) {
-		if ((kp->p_flag & P_SYSTEM) != 0 || kp->p_pid == mypid)
+		if ((kp->p_flag & (P_SYSTEM | P_THREAD)) != 0 ||
+		     kp->p_pid == mypid)
 			continue;
 
 		SLIST_FOREACH(li, &ruidlist, li_chain)
@@ -406,16 +407,14 @@ main(int argc, char **argv)
 	/*
 	 * Take the appropriate action for each matched process, if any.
 	 */
-	did_action = 0;
 	rv = STATUS_NOMATCH;
 	for (i = 0, j = 0, kp = plist; i < nproc; i++, kp++) {
-		if ((kp->p_flag & P_SYSTEM) != 0 || kp->p_pid == mypid)
+		if ((kp->p_flag & (P_SYSTEM | P_THREAD)) != 0 ||
+		     kp->p_pid == mypid)
 			continue;
 		if (selected[i]) {
-			if (longfmt && !pgrep) {
-				did_action = 1;
+			if (longfmt && !pgrep)
 				printf("%d %s\n", (int)kp->p_pid, kp->p_comm);
-			}
 			if (inverse)
 				continue;
 		} else if (!inverse)
@@ -442,11 +441,11 @@ usage(void)
 	else
 		ustr = "[-signal] [-flnovx]";
 
-	fprintf(stderr, "usage: %s %s [-G gid] [-g pgrp] [-P ppid] [-s sid] "
-	    "[-T rtable]\n\t[-t tty] [-U uid] [-u euid] [pattern ...]\n",
+	fprintf(stderr, "usage: %s %s [-G gid] [-g pgrp] [-P ppid] [-s sid]"
+	    "\n\t[-T rtable] [-t tty] [-U uid] [-u euid] [pattern ...]\n",
 	    __progname, ustr);
 
-	exit(STATUS_ERROR);
+	exit(STATUS_BADUSAGE);
 }
 
 int

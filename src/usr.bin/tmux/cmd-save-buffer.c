@@ -1,4 +1,4 @@
-/* $OpenBSD: cmd-save-buffer.c,v 1.12 2011/10/23 08:34:01 nicm Exp $ */
+/* $OpenBSD: cmd-save-buffer.c,v 1.14 2012/05/21 18:27:42 nicm Exp $ */
 
 /*
  * Copyright (c) 2009 Tiago Cunha <me@tiagocunha.org>
@@ -33,7 +33,7 @@ int	cmd_save_buffer_exec(struct cmd *, struct cmd_ctx *);
 const struct cmd_entry cmd_save_buffer_entry = {
 	"save-buffer", "saveb",
 	"ab:", 1, 1,
-	"[-a] " CMD_BUFFER_USAGE,
+	"[-a] " CMD_BUFFER_USAGE " path",
 	0,
 	NULL,
 	NULL,
@@ -79,7 +79,8 @@ cmd_save_buffer_exec(struct cmd *self, struct cmd_ctx *ctx)
 			ctx->error(ctx, "%s: can't write to stdout", path);
 			return (-1);
 		}
-		bufferevent_write(c->stdout_event, pb->data, pb->size);
+		evbuffer_add(c->stdout_data, pb->data, pb->size);
+		server_push_stdout(c);
 	} else {
 		if (c != NULL)
 			wd = c->cwd;

@@ -1,4 +1,4 @@
-/*	$OpenBSD: midi.c,v 1.40 2011/12/02 10:34:50 ratchov Exp $	*/
+/*	$OpenBSD: midi.c,v 1.43 2012/04/25 07:21:41 ratchov Exp $	*/
 /*
  * Copyright (c) 2008 Alexandre Ratchov <alex@caoua.org>
  *
@@ -68,20 +68,20 @@
 /*
  * length of voice and common messages (status byte included)
  */
-unsigned voice_len[] = { 3, 3, 3, 3, 2, 2, 3 };
-unsigned common_len[] = { 0, 2, 3, 2, 0, 0, 1, 1 };
+unsigned int voice_len[] = { 3, 3, 3, 3, 2, 2, 3 };
+unsigned int common_len[] = { 0, 2, 3, 2, 0, 0, 1, 1 };
 
 /*
  * call-back invoked periodically to implement throttling; at each invocation
  * gain more ``tickets'' for processing.  If one of the buffer was blocked by
- * the throttelling mechanism, then run it
+ * the throttling mechanism, then run it
  */
 void
 midi_cb(void *addr)
 {
 	struct aproc *p = (struct aproc *)addr;
 	struct abuf *i, *inext;
-	unsigned tickets;
+	unsigned int tickets;
 
 	timo_add(&p->u.midi.timo, MIDITHRU_TIMO);
 	
@@ -125,13 +125,29 @@ midi_msg_vol(struct aproc *p, int slot, char *msg)
 	msg[2] = s->vol;
 }
 
+void
+midi_msg_master(struct aproc *p, char *msg)
+{
+	struct sysex *x = (struct sysex *)msg;
+
+	memset(x, 0, sizeof(struct sysex));
+	x->start = SYSEX_START;
+	x->type = SYSEX_TYPE_RT;
+	x->id0 = SYSEX_CONTROL;
+	x->id1 = SYSEX_MASTER;
+	x->u.master.fine = 0;
+	x->u.master.coarse = p->u.midi.dev->master;
+	x->u.master.end = SYSEX_END;
+}
+
 /*
  * send a message to the given output
  */
 void
-midi_copy(struct abuf *ibuf, struct abuf *obuf, unsigned char *msg, unsigned len)
+midi_copy(struct abuf *ibuf, struct abuf *obuf, unsigned char *msg,
+    unsigned int len)
 {
-	unsigned ocount;
+	unsigned int ocount;
 	unsigned char *odata;
 
 	if (msg[0] == SYSEX_START)
@@ -191,7 +207,8 @@ midi_flush(struct aproc *p)
  * ie. don't sent back the message to the sender
  */
 void
-midi_send(struct aproc *p, struct abuf *ibuf, unsigned char *msg, unsigned len)
+midi_send(struct aproc *p, struct abuf *ibuf, unsigned char *msg,
+    unsigned int len)
 {
 	struct abuf *i, *inext;
 
@@ -207,10 +224,10 @@ midi_send(struct aproc *p, struct abuf *ibuf, unsigned char *msg, unsigned len)
  * send a quarter frame MTC message
  */
 void
-midi_send_qfr(struct aproc *p, unsigned rate, int delta)
+midi_send_qfr(struct aproc *p, unsigned int rate, int delta)
 {
 	unsigned char buf[2];
-	unsigned data;
+	unsigned int data;
 	int qfrlen;
 
 	p->u.midi.delta += delta * MTC_SEC;
@@ -277,10 +294,11 @@ midi_send_qfr(struct aproc *p, unsigned rate, int delta)
  * send a full frame MTC message
  */
 void
-midi_send_full(struct aproc *p, unsigned origin, unsigned rate, unsigned round, unsigned pos)
+midi_send_full(struct aproc *p, unsigned int origin, unsigned int rate,
+    unsigned int round, unsigned int pos)
 {
 	unsigned char buf[10];
-	unsigned fps;
+	unsigned int fps;
 
 	p->u.midi.delta = MTC_SEC * pos;
 	if (rate % (30 * 4 * round) == 0) {
@@ -326,10 +344,12 @@ midi_send_full(struct aproc *p, unsigned origin, unsigned rate, unsigned round, 
 void
 midi_copy_dump(struct aproc *p, struct abuf *obuf)
 {
-	unsigned i;
+	unsigned int i;
 	unsigned char msg[sizeof(struct sysex)];
 	struct ctl_slot *s;
 
+	midi_msg_master(p, msg);
+	midi_copy(NULL, obuf, msg, SYSEX_SIZE(master));
 	for (i = 0, s = p->u.midi.dev->slot; i < CTL_NSLOT; i++, s++) {
 		midi_msg_info(p, i, msg);
 		midi_copy(NULL, obuf, msg, SYSEX_SIZE(mixinfo));
@@ -346,17 +366,26 @@ midi_copy_dump(struct aproc *p, struct abuf *obuf)
 }
 
 /*
- * notifty the mixer that volume changed, called by whom allocad the slot using
- * ctl_slotnew(). Note: it doesn't make sens to call this from within the
+ * notifty the mixer that volume changed, called by whom allocated the slot using
+ * ctl_slotnew(). Note: it doesn't make sense to call this from within the
  * call-back.
  */
 void
-midi_send_vol(struct aproc *p, int slot, unsigned vol)
+midi_send_vol(struct aproc *p, int slot, unsigned int vol)
 {
 	unsigned char msg[3];
 
 	midi_msg_vol(p, slot, msg);
 	midi_send(p, NULL, msg, 3);
+}
+
+void
+midi_send_master(struct aproc *p)
+{
+	unsigned char msg[sizeof(struct sysex)];
+	
+	midi_msg_master(p, msg);
+	midi_send(p, NULL, msg, SYSEX_SIZE(master));
 }
 
 void
@@ -375,9 +404,9 @@ void
 midi_onvoice(struct aproc *p, struct abuf *ibuf)
 {
 	struct ctl_slot *slot;
-	unsigned chan;
+	unsigned int chan;
 #ifdef DEBUG
-	unsigned i;
+	unsigned int i;
 
 	if (debug_level >= 3) {
 		abuf_dbg(ibuf);
@@ -409,9 +438,9 @@ void
 midi_onsysex(struct aproc *p, struct abuf *ibuf)
 {
 	struct sysex *x;
-	unsigned fps, len;
+	unsigned int fps, len;
 #ifdef DEBUG
-	unsigned i;
+	unsigned int i;
 
 	if (debug_level >= 3) {
 		abuf_dbg(ibuf);
@@ -431,6 +460,11 @@ midi_onsysex(struct aproc *p, struct abuf *ibuf)
 		return;
 	switch (x->type) {
 	case SYSEX_TYPE_RT:
+		if (x->id0 == SYSEX_CONTROL && x->id1 == SYSEX_MASTER) {
+			if (len == SYSEX_SIZE(master))
+				dev_master(p->u.midi.dev, x->u.master.coarse);
+			return;
+		}
 		if (x->id0 != SYSEX_MMC)
 			return;
 		switch (x->id1) {
@@ -499,7 +533,7 @@ int
 midi_in(struct aproc *p, struct abuf *ibuf)
 {
 	unsigned char c, *idata;
-	unsigned i, icount;
+	unsigned int i, icount;
 
 	if (!ABUF_ROK(ibuf))
 		return 0;
@@ -570,7 +604,7 @@ midi_in(struct aproc *p, struct abuf *ibuf)
 	/*
 	 * XXX: if the sysex is received byte by byte, partial messages
 	 * won't be sent until the end byte is received. On the other
-	 * hand we can't flush it here, since we would loose messages
+	 * hand we can't flush it here, since we would lose messages
 	 * we parse
 	 */
 	abuf_rdiscard(ibuf, icount);

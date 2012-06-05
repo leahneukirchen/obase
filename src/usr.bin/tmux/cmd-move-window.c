@@ -1,4 +1,4 @@
-/* $OpenBSD: cmd-move-window.c,v 1.10 2011/01/04 00:42:47 nicm Exp $ */
+/* $OpenBSD: cmd-move-window.c,v 1.12 2012/05/13 07:33:31 nicm Exp $ */
 
 /*
  * Copyright (c) 2008 Nicholas Marriott <nicm@users.sourceforge.net>
@@ -30,8 +30,8 @@ int	cmd_move_window_exec(struct cmd *, struct cmd_ctx *);
 
 const struct cmd_entry cmd_move_window_entry = {
 	"move-window", "movew",
-	"dks:t:", 0, 0,
-	"[-dk] " CMD_SRCDST_WINDOW_USAGE,
+	"dkrs:t:", 0, 0,
+	"[-dkr] " CMD_SRCDST_WINDOW_USAGE,
 	0,
 	NULL,
 	NULL,
@@ -42,10 +42,20 @@ int
 cmd_move_window_exec(struct cmd *self, struct cmd_ctx *ctx)
 {
 	struct args	*args = self->args;
-	struct session	*src, *dst;
+	struct session	*src, *dst, *s;
 	struct winlink	*wl;
 	char		*cause;
 	int		 idx, kflag, dflag;
+
+	if (args_has(args, 'r')) {
+		if ((s = cmd_find_session(ctx, args_get(args, 't'), 0)) == NULL)
+			return (-1);
+
+		session_renumber_windows(s);
+		recalculate_sizes();
+
+		return (0);
+	}
 
 	if ((wl = cmd_find_window(ctx, args_get(args, 's'), &src)) == NULL)
 		return (-1);

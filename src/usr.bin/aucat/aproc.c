@@ -1,4 +1,4 @@
-/*	$OpenBSD: aproc.c,v 1.69 2012/01/10 08:10:21 ratchov Exp $	*/
+/*	$OpenBSD: aproc.c,v 1.73 2012/05/23 19:12:44 ratchov Exp $	*/
 /*
  * Copyright (c) 2008 Alexandre Ratchov <alex@caoua.org>
  *
@@ -173,6 +173,12 @@ aproc_del(struct aproc *p)
 {
 	struct abuf *i;
 
+#ifdef DEBUG
+	if (!p) {
+		dbg_puts("aproc_del: called with NULL argument\n");
+		dbg_panic();
+	}
+#endif
 	if (!(p->flags & APROC_ZOMB)) {
 #ifdef DEBUG
 		if (debug_level >= 3) {
@@ -289,12 +295,12 @@ aproc_depend(struct aproc *p, struct aproc *dep)
 }
 
 int
-rfile_do(struct aproc *p, unsigned todo, unsigned *done)
+rfile_do(struct aproc *p, unsigned int todo, unsigned int *done)
 {
 	struct abuf *obuf = LIST_FIRST(&p->outs);
 	struct file *f = p->u.io.file;
 	unsigned char *data;
-	unsigned n, count, off;
+	unsigned int n, count, off;
 
 	off = p->u.io.partial;
 	data = abuf_wgetblk(obuf, &count, 0);
@@ -451,12 +457,12 @@ wfile_done(struct aproc *p)
 }
 
 int
-wfile_do(struct aproc *p, unsigned todo, unsigned *done)
+wfile_do(struct aproc *p, unsigned int todo, unsigned int *done)
 {
 	struct abuf *ibuf = LIST_FIRST(&p->ins);
 	struct file *f = p->u.io.file;
 	unsigned char *data;
-	unsigned n, count, off;
+	unsigned int n, count, off;
 
 	off = p->u.io.partial;
 	data = abuf_rgetblk(ibuf, &count, 0);
@@ -547,7 +553,7 @@ wfile_new(struct file *f)
 void
 mix_drop(struct abuf *buf, int extra)
 {
-	unsigned count;
+	unsigned int count;
 
 	buf->r.mix.drop += extra;
 	while (buf->r.mix.drop > 0) {
@@ -583,10 +589,10 @@ mix_drop(struct abuf *buf, int extra)
  * obuf->w.mix.todo doesn't exceed the given value
  */
 void
-mix_bzero(struct abuf *obuf, unsigned maxtodo)
+mix_bzero(struct abuf *obuf, unsigned int maxtodo)
 {
 	adata_t *odata;
-	unsigned ocount, todo;
+	unsigned int ocount, todo;
 
 	if (obuf->w.mix.todo >= maxtodo)
 		return;
@@ -611,13 +617,12 @@ mix_bzero(struct abuf *obuf, unsigned maxtodo)
 /*
  * Mix an input block over an output block.
  */
-unsigned
+unsigned int
 mix_badd(struct abuf *ibuf, struct abuf *obuf)
 {
 	adata_t *idata, *odata;
-	unsigned cmin, cmax;
-	unsigned i, j, cc, istart, inext, onext, ostart;
-	unsigned scount, icount, ocount;
+	unsigned int i, scount, icount, ocount;
+	int j, cc, cmin, cmax, istart, inext, onext, ostart, onch;
 	int vol, s;
 
 #ifdef DEBUG
@@ -666,14 +671,19 @@ mix_badd(struct abuf *ibuf, struct abuf *obuf)
 	vol = ADATA_MUL(ibuf->r.mix.weight, ibuf->r.mix.vol);
 	cmin = obuf->cmin > ibuf->cmin ? obuf->cmin : ibuf->cmin;
 	cmax = obuf->cmax < ibuf->cmax ? obuf->cmax : ibuf->cmax;
+	onch = obuf->cmax - obuf->cmin + 1;
 	ostart = cmin - obuf->cmin;
+	if (ostart > onch)
+		ostart = onch;
+	onext = obuf->cmax - cmax;	
+	if (onext > onch)
+		onext = onch;
 	istart = cmin - ibuf->cmin;
-	onext = obuf->cmax - cmax + ostart;
-	inext = ibuf->cmax - cmax + istart;
+	inext = ibuf->cmax - cmax;
 	cc = cmax - cmin + 1;
-	odata += ostart;
-	idata += istart;
 	for (i = scount; i > 0; i--) {
+		odata += ostart;
+		idata += istart;
 		for (j = cc; j > 0; j--) {
 			s = *odata + ADATA_MUL(*idata, vol);
 			if (s >= ADATA_UNIT)
@@ -710,7 +720,7 @@ int
 mix_xrun(struct aproc *p, struct abuf *i)
 {
 	struct abuf *obuf = LIST_FIRST(&p->outs);
-	unsigned fdrop, remain;
+	unsigned int fdrop, remain;
 
 	if (i->r.mix.done > 0)
 		return 1;
@@ -765,9 +775,9 @@ int
 mix_in(struct aproc *p, struct abuf *ibuf)
 {
 	struct abuf *i, *inext, *obuf = LIST_FIRST(&p->outs);
-	unsigned odone;
-	unsigned maxwrite;
-	unsigned scount;
+	unsigned int odone;
+	unsigned int maxwrite;
+	unsigned int scount;
 
 #ifdef DEBUG
 	if (debug_level >= 4) {
@@ -832,9 +842,9 @@ int
 mix_out(struct aproc *p, struct abuf *obuf)
 {
 	struct abuf *i, *inext;
-	unsigned odone;
-	unsigned maxwrite;
-	unsigned scount;
+	unsigned int odone;
+	unsigned int maxwrite;
+	unsigned int scount;
 
 #ifdef DEBUG
 	if (debug_level >= 4) {
@@ -919,7 +929,7 @@ void
 mix_eof(struct aproc *p, struct abuf *ibuf)
 {
 	struct abuf *i, *obuf = LIST_FIRST(&p->outs);
-	unsigned odone;
+	unsigned int odone;
 
 	mix_setmaster(p);
 
@@ -1021,7 +1031,8 @@ struct aproc_ops mix_ops = {
 };
 
 struct aproc *
-mix_new(char *name, int maxlat, unsigned round, unsigned autovol)
+mix_new(char *name, int maxlat, unsigned int round,
+    unsigned int autovol, unsigned int master)
 {
 	struct aproc *p;
 
@@ -1032,6 +1043,7 @@ mix_new(char *name, int maxlat, unsigned round, unsigned autovol)
 	p->u.mix.maxlat = maxlat;
 	p->u.mix.mon = NULL;
 	p->u.mix.autovol = autovol;
+	p->u.mix.master = master;
 	return p;
 }
 
@@ -1041,7 +1053,7 @@ mix_new(char *name, int maxlat, unsigned round, unsigned autovol)
 void
 mix_setmaster(struct aproc *p)
 {
-	unsigned n;
+	unsigned int n;
 	struct abuf *i, *j;
 	int weight;
 
@@ -1061,7 +1073,7 @@ mix_setmaster(struct aproc *p)
 		}
 		if (weight > i->r.mix.maxweight)
 			weight = i->r.mix.maxweight;
-		i->r.mix.weight = weight;
+		i->r.mix.weight = ADATA_MUL(weight, p->u.mix.master);
 #ifdef DEBUG
 		if (debug_level >= 3) {
 			abuf_dbg(i);
@@ -1111,7 +1123,7 @@ void
 sub_silence(struct abuf *buf, int extra)
 {
 	unsigned char *data;
-	unsigned count;
+	unsigned int count;
 
 	buf->w.sub.silence += extra;
 	if (buf->w.sub.silence > 0) {
@@ -1150,9 +1162,8 @@ void
 sub_bcopy(struct abuf *ibuf, struct abuf *obuf)
 {
 	adata_t *idata, *odata;
-	unsigned cmin, cmax;
-	unsigned i, j, cc, istart, inext, onext, ostart;
-	unsigned icount, ocount, scount;
+	unsigned int i, icount, ocount, scount;
+	int j, cc, cmin, cmax, istart, inext, onext, ostart, onch;
 
 	/*
 	 * Drop samples for xrun correction
@@ -1173,14 +1184,19 @@ sub_bcopy(struct abuf *ibuf, struct abuf *obuf)
 		return;
 	cmin = obuf->cmin > ibuf->cmin ? obuf->cmin : ibuf->cmin;
 	cmax = obuf->cmax < ibuf->cmax ? obuf->cmax : ibuf->cmax;
+	onch = obuf->cmax - obuf->cmin + 1;
 	ostart = cmin - obuf->cmin;
-	istart = cmin - ibuf->cmin;
+	if (ostart > onch)
+		ostart = onch;
 	onext = obuf->cmax - cmax;
-	inext = ibuf->cmax - cmax + istart;
+	if (onext > onch)
+		onext = onch;
+	istart = cmin - ibuf->cmin;
+	inext = ibuf->cmax - cmax;
 	cc = cmax - cmin + 1;
-	idata += istart;
 	scount = (icount < ocount) ? icount : ocount;
 	for (i = scount; i > 0; i--) {
+		idata += istart;
 		for (j = ostart; j > 0; j--)
 			*odata++ = 0x1111;
 		for (j = cc; j > 0; j--) {
@@ -1211,7 +1227,7 @@ int
 sub_xrun(struct aproc *p, struct abuf *i)
 {
 	struct abuf *ibuf = LIST_FIRST(&p->ins);
-	unsigned fdrop, remain;
+	unsigned int fdrop, remain;
 
 	if (i->w.sub.done > 0)
 		return 1;
@@ -1267,7 +1283,7 @@ int
 sub_in(struct aproc *p, struct abuf *ibuf)
 {
 	struct abuf *i, *inext;
-	unsigned idone;
+	unsigned int idone;
 
 	if (!ABUF_ROK(ibuf))
 		return 0;
@@ -1313,7 +1329,7 @@ sub_out(struct aproc *p, struct abuf *obuf)
 {
 	struct abuf *ibuf = LIST_FIRST(&p->ins);
 	struct abuf *i, *inext;
-	unsigned idone;
+	unsigned int idone;
 
 	if (!SUB_WOK(obuf))
 		return 0;
@@ -1350,7 +1366,7 @@ void
 sub_hup(struct aproc *p, struct abuf *obuf)
 {
 	struct abuf *i, *ibuf = LIST_FIRST(&p->ins);
-	unsigned idone;
+	unsigned int idone;
 
 	if (!aproc_inuse(p)) {
 #ifdef DEBUG
@@ -1425,7 +1441,7 @@ struct aproc_ops sub_ops = {
 };
 
 struct aproc *
-sub_new(char *name, int maxlat, unsigned round)
+sub_new(char *name, int maxlat, unsigned int round)
 {
 	struct aproc *p;
 
@@ -1449,19 +1465,19 @@ sub_clear(struct aproc *p)
 void
 resamp_bcopy(struct aproc *p, struct abuf *ibuf, struct abuf *obuf)
 {
-	unsigned inch;
+	unsigned int inch;
 	adata_t *idata;
-	unsigned oblksz;
-	unsigned ifr;
-	unsigned onch;
+	unsigned int oblksz;
+	unsigned int ifr;
+	unsigned int onch;
 	int s, ds, diff;
 	adata_t *odata;
-	unsigned iblksz;
-	unsigned ofr;
-	unsigned c;
+	unsigned int iblksz;
+	unsigned int ofr;
+	unsigned int c;
 	adata_t *ctxbuf, *ctx;
-	unsigned ctx_start;
-	unsigned icount, ocount;
+	unsigned int ctx_start;
+	unsigned int icount, ocount;
 
 	/*
 	 * Calculate max frames readable at once from the input buffer.
@@ -1641,10 +1657,10 @@ struct aproc_ops resamp_ops = {
 };
 
 struct aproc *
-resamp_new(char *name, unsigned iblksz, unsigned oblksz)
+resamp_new(char *name, unsigned int iblksz, unsigned int oblksz)
 {
 	struct aproc *p;
-	unsigned i;
+	unsigned int i;
 
 	p = aproc_new(&resamp_ops, name);
 	p->u.resamp.iblksz = iblksz;
@@ -1674,14 +1690,14 @@ resamp_new(char *name, unsigned iblksz, unsigned oblksz)
 void
 enc_bcopy(struct aproc *p, struct abuf *ibuf, struct abuf *obuf)
 {
-	unsigned nch, scount, icount, ocount;
-	unsigned f;
+	unsigned int nch, scount, icount, ocount;
+	unsigned int f;
 	adata_t *idata;
 	int s;
-	unsigned oshift;
+	unsigned int oshift;
 	int osigbit;
-	unsigned obps;
-	unsigned i;
+	unsigned int obps;
+	unsigned int i;
 	unsigned char *odata;
 	int obnext;
 	int osnext;
@@ -1832,16 +1848,16 @@ enc_new(char *name, struct aparams *par)
 void
 dec_bcopy(struct aproc *p, struct abuf *ibuf, struct abuf *obuf)
 {
-	unsigned nch, scount, icount, ocount;
-	unsigned f;
-	unsigned ibps;
-	unsigned i;
+	unsigned int nch, scount, icount, ocount;
+	unsigned int f;
+	unsigned int ibps;
+	unsigned int i;
 	int s = 0xdeadbeef;
 	unsigned char *idata;
 	int ibnext;
 	int isnext;
 	int isigbit;
-	unsigned ishift;
+	unsigned int ishift;
 	adata_t *odata;
 
 	/*
@@ -1990,13 +2006,13 @@ dec_new(char *name, struct aparams *par)
 void
 join_bcopy(struct aproc *p, struct abuf *ibuf, struct abuf *obuf)
 {
-	unsigned h, hops;
-	unsigned inch, inext;
+	unsigned int h, hops;
+	unsigned int inch, inext;
 	adata_t *idata;
-	unsigned onch, onext;
+	unsigned int onch, onext;
 	adata_t *odata;
 	int scale;
-	unsigned c, f, scount, icount, ocount;
+	unsigned int c, f, scount, icount, ocount;
 
 	/*
 	 * Calculate max frames readable at once from the input buffer.
@@ -2134,7 +2150,7 @@ void
 mon_flush(struct aproc *p)
 {
 	struct abuf *obuf = LIST_FIRST(&p->outs);
-	unsigned count;
+	unsigned int count;
 
 #ifdef DEBUG
 	if (debug_level >= 4) {
@@ -2163,10 +2179,11 @@ mon_flush(struct aproc *p)
  * Copy one block.
  */
 void
-mon_snoop(struct aproc *p, struct abuf *ibuf, unsigned pos, unsigned todo)
+mon_snoop(struct aproc *p, struct abuf *ibuf,
+    unsigned int pos, unsigned int todo)
 {
 	struct abuf *obuf = LIST_FIRST(&p->outs);
-	unsigned scount, icount, ocount;
+	unsigned int scount, icount, ocount;
 	adata_t *idata, *odata;
 
 #ifdef DEBUG
@@ -2275,7 +2292,7 @@ struct aproc_ops mon_ops = {
 };
 
 struct aproc *
-mon_new(char *name, unsigned bufsz)
+mon_new(char *name, unsigned int bufsz)
 {
 	struct aproc *p;
 

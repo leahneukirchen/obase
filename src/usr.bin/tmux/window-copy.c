@@ -1,4 +1,4 @@
-/* $OpenBSD: window-copy.c,v 1.76 2011/12/04 16:18:01 nicm Exp $ */
+/* $OpenBSD: window-copy.c,v 1.80 2012/04/01 20:53:47 nicm Exp $ */
 
 /*
  * Copyright (c) 2007 Nicholas Marriott <nicm@users.sourceforge.net>
@@ -805,14 +805,14 @@ window_copy_key_numeric_prefix(struct window_pane *wp, int key)
 
 	key &= KEYC_MASK_KEY;
 	if (key < '0' || key > '9')
-		return 1;
+		return (1);
 
 	if (data->numprefix >= 100) 	/* no more than three digits */
-		return 0;
+		return (0);
 	data->numprefix = data->numprefix * 10 + key - '0';
 
 	window_copy_redraw_lines(wp, screen_size_y(s) - 1, 1);
-	return 0;
+	return (0);
 }
 
 /* ARGSUSED */
@@ -822,7 +822,7 @@ window_copy_mouse(
 {
 	struct window_copy_mode_data	*data = wp->modedata;
 	struct screen			*s = &data->screen;
-	u_int				 i, old_cy;
+	u_int				 i;
 
 	if (m->x >= screen_size_x(s))
 		return;
@@ -835,10 +835,9 @@ window_copy_mouse(
 			for (i = 0; i < 5; i++)
 				window_copy_cursor_up(wp, 0);
 		} else if ((m->b & MOUSE_BUTTON) == MOUSE_2) {
-			old_cy = data->cy;
 			for (i = 0; i < 5; i++)
 				window_copy_cursor_down(wp, 0);
-			if (old_cy == data->cy)
+			if (data->oy == 0)
 				goto reset_mode;
 		}
 		return;
@@ -984,11 +983,12 @@ window_copy_search_up(struct window_pane *wp, const char *searchstr)
 	struct grid_cell	 	 gc;
 	size_t				 searchlen;
 	u_int				 i, last, fx, fy, px;
-	int				 utf8flag, n, wrapped;
+	int				 utf8flag, n, wrapped, wrapflag;
 
 	if (*searchstr == '\0')
 		return;
 	utf8flag = options_get_number(&wp->window->options, "utf8");
+	wrapflag = options_get_number(&wp->window->options, "wrap-search");
 	searchlen = screen_write_strlen(utf8flag, "%s", searchstr);
 
 	screen_init(&ss, searchlen, 1, 0);
@@ -1021,7 +1021,7 @@ retry:
 			break;
 		}
 	}
-	if (!n && !wrapped) {
+	if (wrapflag && !n && !wrapped) {
 		fx = gd->sx - 1;
 		fy = gd->hsize + gd->sy - 1;
 		wrapped = 1;
@@ -1041,11 +1041,12 @@ window_copy_search_down(struct window_pane *wp, const char *searchstr)
 	struct grid_cell	 	 gc;
 	size_t				 searchlen;
 	u_int				 i, first, fx, fy, px;
-	int				 utf8flag, n, wrapped;
+	int				 utf8flag, n, wrapped, wrapflag;
 
 	if (*searchstr == '\0')
 		return;
 	utf8flag = options_get_number(&wp->window->options, "utf8");
+	wrapflag = options_get_number(&wp->window->options, "wrap-search");
 	searchlen = screen_write_strlen(utf8flag, "%s", searchstr);
 
 	screen_init(&ss, searchlen, 1, 0);
@@ -1078,7 +1079,7 @@ retry:
 			break;
 		}
 	}
-	if (!n && !wrapped) {
+	if (wrapflag && !n && !wrapped) {
 		fx = 0;
 		fy = 0;
 		wrapped = 1;
@@ -1629,7 +1630,7 @@ window_copy_cursor_up(struct window_pane *wp, int scroll_only)
 
 	oy = screen_hsize(data->backing) + data->cy - data->oy;
 	ox = window_copy_find_length(wp, oy);
-	if (ox != 0) {
+	if (data->cx != ox) {
 		data->lastcx = data->cx;
 		data->lastsx = ox;
 	}
@@ -1671,7 +1672,7 @@ window_copy_cursor_down(struct window_pane *wp, int scroll_only)
 
 	oy = screen_hsize(data->backing) + data->cy - data->oy;
 	ox = window_copy_find_length(wp, oy);
-	if (ox != 0) {
+	if (data->cx != ox) {
 		data->lastcx = data->cx;
 		data->lastsx = ox;
 	}

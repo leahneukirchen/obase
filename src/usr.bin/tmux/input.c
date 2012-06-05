@@ -1,4 +1,4 @@
-/* $OpenBSD: input.c,v 1.48 2012/02/02 00:10:12 nicm Exp $ */
+/* $OpenBSD: input.c,v 1.52 2012/04/25 21:12:49 nicm Exp $ */
 
 /*
  * Copyright (c) 2007 Nicholas Marriott <nicm@users.sourceforge.net>
@@ -47,9 +47,11 @@
  */
 
 /* Helper functions. */
+struct input_transition;
 int	input_split(struct input_ctx *);
 int	input_get(struct input_ctx *, u_int, int, int);
 void	input_reply(struct input_ctx *, const char *, ...);
+void	input_set_state(struct window_pane *, const struct input_transition *);
 
 /* Transition entry/exit handlers. */
 void	input_clear(struct input_ctx *);
@@ -127,6 +129,7 @@ enum input_csi_type {
 	INPUT_CSI_CUP,
 	INPUT_CSI_CUU,
 	INPUT_CSI_DA,
+	INPUT_CSI_DA_TWO,
 	INPUT_CSI_DCH,
 	INPUT_CSI_DECSCUSR,
 	INPUT_CSI_DECSTBM,
@@ -166,6 +169,7 @@ const struct input_table_entry input_csi_table[] = {
 	{ 'P', "",  INPUT_CSI_DCH },
 	{ 'Z', "",  INPUT_CSI_CBT },
 	{ 'c', "",  INPUT_CSI_DA },
+	{ 'c', ">", INPUT_CSI_DA_TWO },
 	{ 'd', "",  INPUT_CSI_VPA },
 	{ 'f', "",  INPUT_CSI_CUP },
 	{ 'g', "",  INPUT_CSI_TBC },
@@ -690,12 +694,34 @@ input_init(struct window_pane *wp)
 
 	ictx->state = &input_state_ground;
 	ictx->flags = 0;
+
+	ictx->since_ground = evbuffer_new();
 }
 
 /* Destroy input parser. */
 void
-input_free(unused struct window_pane *wp)
+input_free(struct window_pane *wp)
 {
+	if (wp != NULL)
+		evbuffer_free(wp->ictx.since_ground);
+}
+
+/* Change input state. */
+void
+input_set_state(struct window_pane *wp, const struct input_transition *itr)
+{
+	struct input_ctx	*ictx = &wp->ictx;
+	struct evbuffer		*ground_evb = ictx->since_ground;
+
+	if (ictx->state->exit != NULL)
+		ictx->state->exit(ictx);
+
+	if (itr->state == &input_state_ground)
+		evbuffer_drain(ground_evb, EVBUFFER_LENGTH(ground_evb));
+
+	ictx->state = itr->state;
+	if (ictx->state->enter != NULL)
+		ictx->state->enter(ictx);
 }
 
 /* Parse input. */
@@ -753,13 +779,12 @@ input_parse(struct window_pane *wp)
 			continue;
 
 		/* And switch state, if necessary. */
-		if (itr->state != NULL) {
-			if (ictx->state->exit != NULL)
-				ictx->state->exit(ictx);
-			ictx->state = itr->state;
-			if (ictx->state->enter != NULL)
-				ictx->state->enter(ictx);
-		}
+		if (itr->state != NULL)
+			input_set_state(wp, itr);
+
+		/* If not in ground state, save input. */
+		if (ictx->state != &input_state_ground)
+			evbuffer_add(ictx->since_ground, &ictx->ch, 1);
 	}
 
 	/* Close the screen. */
@@ -906,6 +931,7 @@ input_c0_dispatch(struct input_ctx *ictx)
 	struct screen_write_ctx	*sctx = &ictx->ctx;
 	struct window_pane	*wp = ictx->wp;
 	struct screen		*s = sctx->s;
+	u_int			 trigger;
 
 	log_debug("%s: '%c", __func__, ictx->ch);
 
@@ -917,7 +943,7 @@ input_c0_dispatch(struct input_ctx *ictx)
 		break;
 	case '\010':	/* BS */
 		screen_write_backspace(sctx);
-		break;
+		goto count_c0;
 	case '\011':	/* HT */
 		/* Don't tab beyond the end of the line. */
 		if (s->cx >= screen_size_x(s) - 1)
@@ -934,10 +960,10 @@ input_c0_dispatch(struct input_ctx *ictx)
 	case '\013':	/* VT */
 	case '\014':	/* FF */
 		screen_write_linefeed(sctx, 0);
-		break;
+		goto count_c0;
 	case '\015':	/* CR */
 		screen_write_carriagereturn(sctx);
-		break;
+		goto count_c0;
 	case '\016':	/* SO */
 		ictx->cell.attr |= GRID_ATTR_CHARSET;
 		break;
@@ -947,6 +973,15 @@ input_c0_dispatch(struct input_ctx *ictx)
 	default:
 		log_debug("%s: unknown '%c'", __func__, ictx->ch);
 		break;
+	}
+
+	return (0);
+
+count_c0:
+	trigger = options_get_number(&wp->window->options, "c0-change-trigger");
+	if (++wp->changes == trigger) {
+		wp->flags |= PANE_DROP;
+		window_pane_timer_start(wp);
 	}
 
 	return (0);
@@ -1097,6 +1132,16 @@ input_csi_dispatch(struct input_ctx *ictx)
 			break;
 		}
 		break;
+	case INPUT_CSI_DA_TWO:
+		switch (input_get(ictx, 0, 0, 0)) {
+		case 0:
+			input_reply(ictx, "\033[>0;95;0c");
+			break;
+		default:
+			log_debug("%s: unknown '%c'", __func__, ictx->ch);
+			break;
+		}
+		break;
 	case INPUT_CSI_DCH:
 		screen_write_deletecharacter(sctx, input_get(ictx, 0, 1, 1));
 		break;
@@ -1212,6 +1257,9 @@ input_csi_dispatch(struct input_ctx *ictx)
 		case 1049:
 			window_pane_alternate_off(wp, &ictx->cell);
 			break;
+		case 2004:
+			screen_write_bracketpaste(&ictx->ctx, 0);
+			break;
 		default:
 			log_debug("%s: unknown '%c'", __func__, ictx->ch);
 			break;
@@ -1263,6 +1311,9 @@ input_csi_dispatch(struct input_ctx *ictx)
 			break;
 		case 1049:
 			window_pane_alternate_on(wp, &ictx->cell);
+			break;
+		case 2004:
+			screen_write_bracketpaste(&ictx->ctx, 1);
 			break;
 		default:
 			log_debug("%s: unknown '%c'", __func__, ictx->ch);

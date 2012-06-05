@@ -1,4 +1,4 @@
-/* $OpenBSD: machine.c,v 1.69 2011/07/12 14:57:53 tedu Exp $	 */
+/* $OpenBSD: machine.c,v 1.72 2012/04/21 03:14:50 guenther Exp $	 */
 
 /*-
  * Copyright (c) 1994 Thorsten Lockert <tholo@sigmasoft.com>
@@ -332,8 +332,12 @@ get_process_info(struct system_info *si, struct process_select *sel,
 	int show_idle, show_system, show_threads, show_uid, show_pid, show_cmd;
 	int total_procs, active_procs;
 	struct kinfo_proc **prefp, *pp;
+	int what = KERN_PROC_KTHREAD;
 
-	if ((pbase = getprocs(KERN_PROC_KTHREAD, 0, &nproc)) == NULL) {
+	if (sel->threads)
+		what |= KERN_PROC_SHOW_THREADS;
+
+	if ((pbase = getprocs(what, 0, &nproc)) == NULL) {
 		/* warnx("%s", kvm_geterr(kd)); */
 		quit(23);
 	}
@@ -367,6 +371,8 @@ get_process_info(struct system_info *si, struct process_select *sel,
 		 *  status field.  Processes with P_SYSTEM set are system
 		 *  processes---these get ignored unless show_system is set.
 		 */
+		if (show_threads && pp->p_tid == -1)
+			continue;
 		if (pp->p_stat != 0 &&
 		    (show_system || (pp->p_flag & P_SYSTEM) == 0) &&
 		    (show_threads || (pp->p_flag & P_THREAD) == 0)) {

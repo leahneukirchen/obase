@@ -1,4 +1,4 @@
-/* $OpenBSD: server-fn.c,v 1.53 2012/01/29 02:22:11 nicm Exp $ */
+/* $OpenBSD: server-fn.c,v 1.58 2012/05/22 10:56:48 nicm Exp $ */
 
 /*
  * Copyright (c) 2007 Nicholas Marriott <nicm@users.sourceforge.net>
@@ -47,16 +47,26 @@ server_fill_environ(struct session *s, struct environ *env)
 }
 
 void
+server_write_ready(struct client *c)
+{
+	server_write_client(c, MSG_READY, NULL, 0);
+}
+
+int
 server_write_client(
     struct client *c, enum msgtype type, const void *buf, size_t len)
 {
 	struct imsgbuf	*ibuf = &c->ibuf;
+	int              error;
 
 	if (c->flags & CLIENT_BAD)
-		return;
+		return (-1);
 	log_debug("writing %d to client %d", type, c->ibuf.fd);
-	imsg_compose(ibuf, type, PROTOCOL_VERSION, -1, -1, (void *) buf, len);
-	server_update_event(c);
+	error = imsg_compose(ibuf, type, PROTOCOL_VERSION, -1, -1,
+	    (void *) buf, len);
+	if (error == 1)
+		server_update_event(c);
+	return (error == 1 ? 0 : -1);
 }
 
 void
@@ -263,6 +273,9 @@ server_kill_window(struct window *w)
 			} else
 				server_redraw_session_group(s);
 		}
+
+		if (options_get_number(&s->options, "renumber-windows"))
+			session_renumber_windows(s);
 	}
 }
 
@@ -293,6 +306,7 @@ server_link_window(struct session *src, struct winlink *srcwl,
 			 * Can't use session_detach as it will destroy session
 			 * if this makes it empty.
 			 */
+			notify_window_unlinked(dst, dstwl->window);
 			dstwl->flags &= ~WINLINK_ALERTFLAGS;
 			winlink_stack_remove(&dst->lastw, dstwl);
 			winlink_remove(&dst->windows, dstwl);
@@ -419,6 +433,7 @@ server_destroy_session(struct session *s)
 		} else {
 			c->last_session = NULL;
 			c->session = s_new;
+			notify_attached_session_changed(c);
 			session_update_activity(s_new);
 			server_redraw_client(c);
 		}
@@ -453,7 +468,8 @@ server_set_identify(struct client *c)
 	tv.tv_sec = delay / 1000;
 	tv.tv_usec = (delay % 1000) * 1000L;
 
-	evtimer_del(&c->identify_timer);
+	if (event_initialized (&c->identify_timer))
+		evtimer_del(&c->identify_timer);
 	evtimer_set(&c->identify_timer, server_callback_identify, c);
 	evtimer_add(&c->identify_timer, &tv);
 
@@ -491,7 +507,76 @@ server_update_event(struct client *c)
 		events |= EV_READ;
 	if (c->ibuf.w.queued > 0)
 		events |= EV_WRITE;
-	event_del(&c->event);
+	if (event_initialized(&c->event))
+		event_del(&c->event);
 	event_set(&c->event, c->ibuf.fd, events, server_client_callback, c);
 	event_add(&c->event, NULL);
+}
+
+/* Push stdout to client if possible. */
+void
+server_push_stdout(struct client *c)
+{
+	struct msg_stdout_data data;
+	size_t                 size;
+
+	size = EVBUFFER_LENGTH(c->stdout_data);
+	if (size == 0)
+		return;
+	if (size > sizeof data.data)
+		size = sizeof data.data;
+
+	memcpy(data.data, EVBUFFER_DATA(c->stdout_data), size);
+	data.size = size;
+
+	if (server_write_client(c, MSG_STDOUT, &data, sizeof data) == 0)
+		evbuffer_drain(c->stdout_data, size);
+}
+
+/* Push stderr to client if possible. */
+void
+server_push_stderr(struct client *c)
+{
+	struct msg_stderr_data data;
+	size_t                 size;
+
+	size = EVBUFFER_LENGTH(c->stderr_data);
+	if (size == 0)
+		return;
+	if (size > sizeof data.data)
+		size = sizeof data.data;
+
+	memcpy(data.data, EVBUFFER_DATA(c->stderr_data), size);
+	data.size = size;
+
+	if (server_write_client(c, MSG_STDERR, &data, sizeof data) == 0)
+		evbuffer_drain(c->stderr_data, size);
+}
+
+/* Set stdin callback. */
+int
+server_set_stdin_callback(struct client *c, void (*cb)(struct client *, int,
+    void *), void *cb_data, char **cause)
+{
+	if (c == NULL) {
+		*cause = xstrdup("no client with stdin");
+		return (-1);
+	}
+	if (c->flags & CLIENT_TERMINAL) {
+		*cause = xstrdup("stdin is a tty");
+		return (-1);
+	}
+	if (c->stdin_callback != NULL) {
+		*cause = xstrdup("stdin in use");
+		return (-1);
+	}
+
+	c->stdin_callback_data = cb_data;
+	c->stdin_callback = cb;
+
+	c->references++;
+
+	if (c->stdin_closed)
+		c->stdin_callback (c, 1, c->stdin_callback_data);
+	return (0);
 }

@@ -1,4 +1,4 @@
-/*	$OpenBSD: main.c,v 1.81 2010/06/29 23:12:33 halex Exp $	*/
+/*	$OpenBSD: main.c,v 1.83 2012/05/19 02:04:22 lteo Exp $	*/
 /*	$NetBSD: main.c,v 1.24 1997/08/18 10:20:26 lukem Exp $	*/
 
 /*
@@ -114,6 +114,7 @@ main(volatile int argc, char *argv[])
 	hist = NULL;
 	cookiefile = NULL;
 	resume = 0;
+	srcaddr = NULL;
 	marg_sl = sl_init();
 #endif /* !SMALL */
 	mark = HASHBYTES;
@@ -174,7 +175,7 @@ main(volatile int argc, char *argv[])
 	cookiefile = getenv("http_cookies");
 #endif /* !SMALL */
 
-	while ((ch = getopt(argc, argv, "46AaCc:dEegik:mno:pP:r:tvV")) != -1) {
+	while ((ch = getopt(argc, argv, "46AaCc:dEegik:mno:pP:r:s:tvV")) != -1) {
 		switch (ch) {
 		case '4':
 			family = PF_INET;
@@ -273,6 +274,12 @@ main(volatile int argc, char *argv[])
 					optarg);
 				usage();
 			}
+			break;
+
+		case 's':
+#ifndef SMALL
+			srcaddr = optarg;
+#endif /* !SMALL */
 			break;
 
 		case 't':
@@ -752,32 +759,48 @@ usage(void)
 	(void)fprintf(stderr, "usage: %s "
 #ifndef SMALL
 	    "[-46AadEegimnptVv] [-k seconds] [-P port] "
-	    "[-r seconds] [host [port]]\n"
+	    "[-r seconds] [-s srcaddr]\n"
+	    "           [host [port]]\n"
 	    "       %s [-C] "
 #endif /* !SMALL */
 	    "[-o output] "
+#ifndef SMALL
+	    "[-s srcaddr]\n"
+	    "           "
+#endif /* !SMALL */
 	    "ftp://[user:password@]host[:port]/file[/] ...\n"
 	    "       %s "
 #ifndef SMALL
 	    "[-C] [-c cookie] "
 #endif /* !SMALL */
 	    "[-o output] "
+#ifndef SMALL
+	    "[-s srcaddr] "
+#endif /* !SMALL */
 	    "http://host[:port]/file ...\n"
 #ifndef SMALL
-	    "       %s [-C] [-c cookie] [-o output] "
-	    "https://host[:port]/file ...\n"
+	    "       %s [-C] [-c cookie] [-o output] [-s srcaddr] "
+	    "https://host[:port]/file\n"
+	    "           ...\n"
 #endif /* !SMALL */
 	    "       %s "
 #ifndef SMALL
 	    "[-C] "
 #endif /* !SMALL */
 	    "[-o output] "
+#ifndef SMALL
+	    "[-s srcaddr] "
+#endif /* !SMALL */
 	    "file:file ...\n"
 	    "       %s "
 #ifndef SMALL
 	    "[-C] "
 #endif /* !SMALL */
-	    "[-o output] host:/file[/] ...\n",
+	    "[-o output] "
+#ifndef SMALL
+	    "[-s srcaddr] "
+#endif /* !SMALL */
+	    "host:/file[/] ...\n",
 #ifndef SMALL
 	    __progname, __progname, __progname, __progname, __progname,
 	    __progname);

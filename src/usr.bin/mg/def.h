@@ -1,4 +1,4 @@
-/*	$OpenBSD: def.h,v 1.118 2011/12/10 14:09:48 lum Exp $	*/
+/*	$OpenBSD: def.h,v 1.122 2012/05/29 05:40:36 lum Exp $	*/
 
 /* This file is in the public domain. */
 
@@ -13,12 +13,6 @@
 #include	"sysdef.h"	/* Order is critical.		 */
 #include	"ttydef.h"
 #include	"chrdef.h"
-
-#ifdef	NO_MACRO
-#ifndef NO_STARTUP
-#define NO_STARTUP		/* NO_MACRO implies NO_STARTUP */
-#endif
-#endif
 
 typedef int	(*PF)(int, int);	/* generally useful type */
 
@@ -200,9 +194,9 @@ struct mgwin {
 	struct line	*w_markp;	/* Line containing "mark"	*/
 	int		 w_doto;	/* Byte offset for "."		*/
 	int		 w_marko;	/* Byte offset for "mark"	*/
-	char		 w_toprow;	/* Origin 0 top row of window	*/
-	char		 w_ntrows;	/* # of rows of text in window	*/
-	char		 w_frame;	/* #lines to reframe by.	*/
+	int		 w_toprow;	/* Origin 0 top row of window	*/
+	int		 w_ntrows;	/* # of rows of text in window	*/
+	int		 w_frame;	/* #lines to reframe by.	*/
 	char		 w_rflag;	/* Redisplay Flags.		*/
 	char		 w_flag;	/* Flags.			*/
 	struct line	*w_wrapline;
@@ -355,7 +349,7 @@ int		 filewrite(int, int);
 int		 filesave(int, int);
 int		 buffsave(struct buffer *);
 int		 makebkfile(int, int);
-int		 writeout(struct buffer *, char *);
+int		 writeout(FILE **, struct buffer *, char *);
 void		 upmodes(struct buffer *);
 size_t		 xbasename(char *, const char *, size_t);
 
@@ -436,12 +430,12 @@ int		 getxtra(struct list *, struct list *, int, int);
 void		 free_file_list(struct list *);
 
 /* fileio.c */
-int		 ffropen(const char *, struct buffer *);
-void		 ffstat(struct buffer *);
-int		 ffwopen(const char *, struct buffer *);
-int		 ffclose(struct buffer *);
-int		 ffputbuf(struct buffer *);
-int		 ffgetline(char *, int, int *);
+int		 ffropen(FILE **, const char *, struct buffer *);
+void		 ffstat(FILE *, struct buffer *);
+int		 ffwopen(FILE **, const char *, struct buffer *);
+int		 ffclose(FILE *, struct buffer *);
+int		 ffputbuf(FILE *, struct buffer *);
+int		 ffgetline(FILE *, char *, int, int *);
 int		 fbackupfile(const char *);
 char		*adjustname(const char *, int);
 char		*startupfile(char *);
@@ -567,6 +561,8 @@ int		 prefixregion(int, int);
 int		 setprefix(int, int);
 int		 region_get_data(struct region *, char *, int);
 void		 region_put_data(const char *, int);
+int		 markbuffer(int, int);
+int		 piperegion(int, int);
 
 /* search.c X */
 int		 forwsearch(int, int);
@@ -592,12 +588,10 @@ int		 showmatch(int, int);
 /* version.c X */
 int		 showversion(int, int);
 
-#ifndef NO_MACRO
 /* macro.c X */
 int		 definemacro(int, int);
 int		 finishmacro(int, int);
 int		 executemacro(int, int);
-#endif	/* !NO_MACRO */
 
 /* modes.c X */
 int		 indentmode(int, int);

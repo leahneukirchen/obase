@@ -1,4 +1,4 @@
-/*	$OpenBSD: search.c,v 1.38 2011/01/21 19:10:13 kjell Exp $	*/
+/*	$OpenBSD: search.c,v 1.40 2012/05/25 05:16:59 lum Exp $	*/
 
 /* This file is in the public domain. */
 
@@ -15,9 +15,7 @@
 
 #include <ctype.h>
 
-#ifndef NO_MACRO
 #include "macro.h"
-#endif /* !NO_MACRO */
 
 #define SRCH_BEGIN	(0)	/* Search sub-codes.	 */
 #define SRCH_FORW	(-1)
@@ -175,12 +173,10 @@ isearch(int dir)
 	char		 opat[NPAT];
 	int		 cdotline;	/* Saved line number */
 
-#ifndef NO_MACRO
 	if (macrodef) {
 		ewprintf("Can't isearch in macro");
 		return (FALSE);
 	}
-#endif /* !NO_MACRO */
 	for (cip = 0; cip < NSRCH; cip++)
 		cmds[cip].s_code = SRCH_NOPR;
 
@@ -249,17 +245,21 @@ isearch(int dir)
 				ewprintf("Overwrapped I-search: %s", pat);
 				break;
 			}
-
 			is_lpush();
 			pptr = strlen(pat);
-			(void)forwchar(FFRAND, 1);
-			if (is_find(SRCH_FORW) != FALSE)
-				is_cpush(SRCH_MARK);
-			else {
-				(void)backchar(FFRAND, 1);
-				ttbeep();
-				success = FALSE;
-				ewprintf("Failed I-search: %s", pat);
+			if (forwchar(FFRAND, 1) == FALSE) {
+                                ttbeep();
+                                success = FALSE;
+                                ewprintf("Failed I-search: %s", pat);
+			} else {
+				if (is_find(SRCH_FORW) != FALSE)
+					is_cpush(SRCH_MARK);
+				else {
+					(void)backchar(FFRAND, 1);
+					ttbeep();
+					success = FALSE;
+					ewprintf("Failed I-search: %s", pat);
+				}
 			}
 			is_prompt(dir, pptr < 0, success);
 			break;
@@ -284,13 +284,17 @@ isearch(int dir)
 			}
 			is_lpush();
 			pptr = strlen(pat);
-			(void)backchar(FFRAND, 1);
-			if (is_find(SRCH_BACK) != FALSE)
-				is_cpush(SRCH_MARK);
-			else {
-				(void)forwchar(FFRAND, 1);
-				ttbeep();
-				success = FALSE;
+                        if (backchar(FFRAND, 1) == FALSE) {
+                                ttbeep();
+                                success = FALSE;
+                        } else {
+				if (is_find(SRCH_BACK) != FALSE)
+					is_cpush(SRCH_MARK);
+				else {
+					(void)forwchar(FFRAND, 1);
+					ttbeep();
+					success = FALSE;
+				}
 			}
 			is_prompt(dir, pptr < 0, success);
 			break;
@@ -553,12 +557,10 @@ queryrepl(int f, int n)
 	int	plen;			/* length of found string	*/
 	char	news[NPAT], *rep;	/* replacement string		*/
 
-#ifndef NO_MACRO
 	if (macrodef) {
 		ewprintf("Can't query replace in macro");
 		return (FALSE);
 	}
-#endif /* !NO_MACRO */
 
 	if ((s = readpattern("Query replace")) != TRUE)
 		return (s);

@@ -1,7 +1,7 @@
-/*	$Id: tbl_term.c,v 1.10 2011/09/20 23:05:46 schwarze Exp $ */
+/*	$Id: tbl_term.c,v 1.13 2012/05/27 01:01:24 schwarze Exp $ */
 /*
  * Copyright (c) 2009, 2011 Kristaps Dzonsons <kristaps@bsd.lv>
- * Copyright (c) 2011 Ingo Schwarze <schwarze@openbsd.org>
+ * Copyright (c) 2011, 2012 Ingo Schwarze <schwarze@openbsd.org>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -122,49 +122,23 @@ term_tbl(struct termp *tp, const struct tbl_span *sp)
 		dp = sp->first;
 		spans = 0;
 		for (hp = sp->head; hp; hp = hp->next) {
+
 			/* 
 			 * If the current data header is invoked during
 			 * a spanner ("spans" > 0), don't emit anything
 			 * at all.
 			 */
-			switch (hp->pos) {
-			case (TBL_HEAD_VERT):
-				/* FALLTHROUGH */
-			case (TBL_HEAD_DVERT):
-				if (spans <= 0)
-					tbl_vrule(tp, hp);
-				continue;
-			case (TBL_HEAD_DATA):
-				break;
-			}
 
 			if (--spans >= 0)
 				continue;
 
-			/*
-			 * All cells get a leading blank, except the
-			 * first one and those after double rulers.
-			 */
+			/* Separate columns. */
 
-			if (hp->prev && TBL_HEAD_DVERT != hp->prev->pos)
-				tbl_char(tp, ASCII_NBRSP, 1);
+			if (NULL != hp->prev)
+				tbl_vrule(tp, hp);
 
 			col = &tp->tbl.cols[hp->ident];
 			tbl_data(tp, sp->tbl, dp, col);
-
-			/* No trailing blanks. */
-
-			if (NULL == hp->next)
-				break;
-
-			/*
-			 * Add another blank between cells,
-			 * or two when there is no vertical ruler.
-			 */
-
-			tbl_char(tp, ASCII_NBRSP,
-			    TBL_HEAD_VERT  == hp->next->pos ||
-			    TBL_HEAD_DVERT == hp->next->pos ? 1 : 2);
 
 			/* 
 			 * Go to the next data cell and assign the
@@ -193,10 +167,14 @@ term_tbl(struct termp *tp, const struct tbl_span *sp)
 
 	if (TBL_SPAN_LAST & sp->flags) {
 		if (TBL_OPT_DBOX & sp->tbl->opts ||
-		    TBL_OPT_BOX  & sp->tbl->opts)
+		    TBL_OPT_BOX  & sp->tbl->opts) {
 			tbl_hframe(tp, sp, 0);
-		if (TBL_OPT_DBOX & sp->tbl->opts)
+			tp->skipvsp = 1;
+		}
+		if (TBL_OPT_DBOX & sp->tbl->opts) {
 			tbl_hframe(tp, sp, 1);
+			tp->skipvsp = 2;
+		}
 		assert(tp->tbl.cols);
 		free(tp->tbl.cols);
 		tp->tbl.cols = NULL;
@@ -218,17 +196,14 @@ tbl_rulewidth(struct termp *tp, const struct tbl_head *hp)
 	size_t		 width;
 
 	width = tp->tbl.cols[hp->ident].width;
-	if (TBL_HEAD_DATA == hp->pos) {
-		/* Account for leading blanks. */
-		if (hp->prev && TBL_HEAD_DVERT != hp->prev->pos)
-			width++;
-		/* Account for trailing blanks. */
-		width++;
-		if (hp->next &&
-		    TBL_HEAD_VERT  != hp->next->pos &&
-		    TBL_HEAD_DVERT != hp->next->pos)
-			width++;
-	}
+
+	/* Account for leading blanks. */
+	if (hp->prev)
+		width += 2 - hp->vert;
+
+	/* Account for trailing blank. */
+	width++;
+
 	return(width);
 }
 
@@ -246,10 +221,11 @@ tbl_hrule(struct termp *tp, const struct tbl_span *sp)
 	if (TBL_SPAN_DHORIZ == sp->pos)
 		c = '=';
 
-	for (hp = sp->head; hp; hp = hp->next)
-		tbl_char(tp,
-		    TBL_HEAD_DATA == hp->pos ? c : '+',
-		    tbl_rulewidth(tp, hp));
+	for (hp = sp->head; hp; hp = hp->next) {
+		if (hp->prev && hp->vert)
+			tbl_char(tp, '+', hp->vert);
+		tbl_char(tp, c, tbl_rulewidth(tp, hp));
+	}
 }
 
 /*
@@ -264,10 +240,11 @@ tbl_hframe(struct termp *tp, const struct tbl_span *sp, int outer)
 	const struct tbl_head *hp;
 
 	term_word(tp, "+");
-	for (hp = sp->head; hp; hp = hp->next)
-		tbl_char(tp,
-		    outer || TBL_HEAD_DATA == hp->pos ? '-' : '+',
-		    tbl_rulewidth(tp, hp));
+	for (hp = sp->head; hp; hp = hp->next) {
+		if (hp->prev && hp->vert)
+			tbl_char(tp, (outer ? '-' : '+'), hp->vert);
+		tbl_char(tp, '-', tbl_rulewidth(tp, hp));
+	}
 	term_word(tp, "+");
 	term_flushln(tp);
 }
@@ -334,16 +311,11 @@ static void
 tbl_vrule(struct termp *tp, const struct tbl_head *hp)
 {
 
-	switch (hp->pos) {
-	case (TBL_HEAD_VERT):
-		term_word(tp, "|");
-		break;
-	case (TBL_HEAD_DVERT):
-		term_word(tp, "||");
-		break;
-	default:
-		break;
-	}
+	tbl_char(tp, ASCII_NBRSP, 1);
+	if (0 < hp->vert)
+		tbl_char(tp, '|', hp->vert);
+	if (2 > hp->vert)
+		tbl_char(tp, ASCII_NBRSP, 2 - hp->vert);
 }
 
 static void
@@ -365,11 +337,19 @@ static void
 tbl_literal(struct termp *tp, const struct tbl_dat *dp, 
 		const struct roffcol *col)
 {
-	size_t		 len, padl, padr;
+	struct tbl_head		*hp;
+	size_t			 width, len, padl, padr;
+	int			 spans;
 
 	assert(dp->string);
 	len = term_strlen(tp, dp->string);
-	padr = col->width > len ? col->width - len : 0;
+
+	hp = dp->layout->head->next;
+	width = col->width;
+	for (spans = dp->spans; spans--; hp = hp->next)
+		width += tp->tbl.cols[hp->ident].width + 3;
+
+	padr = width > len ? width - len : 0;
 	padl = 0;
 
 	switch (dp->layout->pos) {

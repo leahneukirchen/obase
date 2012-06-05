@@ -75,6 +75,12 @@ struct {
 	size_t	  dummybuf_len;	/* IO buffer len */
 } tcpbench, *ptb;
 
+struct tcpservsock {
+	struct event ev;
+	struct event evt;
+	int fd;
+};
+
 /* stats for a single tcp connection, udp uses only one  */
 struct statctx {
 	TAILQ_ENTRY(statctx) entry;
@@ -85,6 +91,7 @@ struct statctx {
 	size_t buflen;
 	struct event ev;
 	/* TCP only */
+	struct tcpservsock *tcp_ts;
 	u_long tcp_tcbaddr;
 	/* UDP only */
 	u_long udp_slice_pkts;
@@ -603,16 +610,12 @@ udp_server_handle_sc(int fd, short event, void *v_sc)
 	ssize_t n;
 	struct statctx *sc = v_sc;
 
-again:
 	n = read(fd, ptb->dummybuf, ptb->dummybuf_len);
 	if (n == 0)
 		return;
 	else if (n == -1) {
-		if (errno == EINTR)
-			goto again;
-		else if (errno == EWOULDBLOCK) 
-			return;
-		warn("fd %d read error", fd);
+		if (errno != EINTR && errno != EWOULDBLOCK)
+			warn("fd %d read error", fd);
 		return;
 	}
 		
@@ -632,21 +635,26 @@ tcp_server_handle_sc(int fd, short event, void *v_sc)
 	struct statctx *sc = v_sc;
 	ssize_t n;
 
-again:
 	n = read(sc->fd, sc->buf, sc->buflen);
 	if (n == -1) {
-		if (errno == EINTR)
-			goto again;
-		else if (errno == EWOULDBLOCK) 
-			return;
-		warn("fd %d read error", sc->fd);
+		if (errno != EINTR && errno != EWOULDBLOCK)
+			warn("fd %d read error", sc->fd);
 		return;
 	} else if (n == 0) {
 		if (ptb->vflag)
 			fprintf(stderr, "%8d closed by remote end\n", sc->fd);
+
+		TAILQ_REMOVE(&sc_queue, sc, entry);
+
 		event_del(&sc->ev);
 		close(sc->fd);
-		TAILQ_REMOVE(&sc_queue, sc, entry);
+
+		/* Some file descriptors are available again. */
+		if (evtimer_pending(&sc->tcp_ts->evt, NULL)) {
+			evtimer_del(&sc->tcp_ts->evt);
+			event_add(&sc->tcp_ts->ev, NULL);
+		}
+
 		free(sc);
 		mainstats.nconns--;
 		set_slice_timer(mainstats.nconns > 0);
@@ -659,8 +667,9 @@ again:
 }
 	
 static void
-tcp_server_accept(int fd, short event, void *bula)
+tcp_server_accept(int fd, short event, void *arg)
 {
+	struct tcpservsock *ts = arg;
 	int sock, r;
 	struct statctx *sc;
 	struct sockaddr_storage ss;
@@ -668,11 +677,22 @@ tcp_server_accept(int fd, short event, void *bula)
 	char tmp[128];
 	
 	sslen = sizeof(ss);
-again:	
+
+	event_add(&ts->ev, NULL);
+	if (event & EV_TIMEOUT)
+		return;
 	if ((sock = accept(fd, (struct sockaddr *)&ss, &sslen)) == -1) {
-		if (errno == EINTR)
-			goto again;
-		warn("accept");
+		/*
+		 * Pause accept if we are out of file descriptors, or
+		 * libevent will haunt us here too.
+		 */
+		if (errno == ENFILE || errno == EMFILE) {
+			struct timeval evtpause = { 1, 0 };
+
+			event_del(&ts->ev);
+			evtimer_add(&ts->evt, &evtpause);
+		} else if (errno != EWOULDBLOCK && errno != EINTR)
+			warn("accept");
 		return;
 	}
 	saddr_ntop((struct sockaddr *)&ss, sslen,
@@ -695,6 +715,7 @@ again:
 	/* Alloc client structure and register reading callback */
 	if ((sc = calloc(1, sizeof(*sc))) == NULL)
 		err(1, "calloc");
+	sc->tcp_ts = ts;
 	sc->fd = sock;
 	stats_prepare(sc);
 	event_set(&sc->ev, sc->fd, EV_READ | EV_PERSIST,
@@ -715,6 +736,7 @@ server_init(struct addrinfo *aitop, struct statctx *udp_sc)
 	int sock, on = 1;
 	struct addrinfo *ai;
 	struct event *ev;
+	struct tcpservsock *ts;
 	nfds_t lnfds;
 
 	lnfds = 0;
@@ -775,15 +797,22 @@ server_init(struct addrinfo *aitop, struct statctx *udp_sc)
 				continue;
 			}
 		}
-		if ((ev = calloc(1, sizeof(*ev))) == NULL)
-			err(1, "calloc");
-		if (UDP_MODE)
+		if (UDP_MODE) {
+			if ((ev = calloc(1, sizeof(*ev))) == NULL)
+				err(1, "calloc");
 			event_set(ev, sock, EV_READ | EV_PERSIST,
 			    udp_server_handle_sc, udp_sc);
-		else
-			event_set(ev, sock, EV_READ | EV_PERSIST,
-			    tcp_server_accept, NULL);
-		event_add(ev, NULL);
+			event_add(ev, NULL);
+		} else {
+			if ((ts = calloc(1, sizeof(*ts))) == NULL)
+				err(1, "calloc");
+
+			ts->fd = sock;
+			evtimer_set(&ts->evt, tcp_server_accept, ts);
+			event_set(&ts->ev, ts->fd, EV_READ,
+			    tcp_server_accept, ts);
+			event_add(&ts->ev, NULL);
+		}
 		if (ptb->vflag >= 3)
 			fprintf(stderr, "bound to fd %d\n", sock);
 		lnfds++;
@@ -799,11 +828,10 @@ client_handle_sc(int fd, short event, void *v_sc)
 	struct statctx *sc = v_sc;
 	ssize_t n;
 
-again:
 	if ((n = write(sc->fd, sc->buf, sc->buflen)) == -1) {
-		if (errno == EINTR || errno == EAGAIN ||
+		if (errno == EINTR || errno == EWOULDBLOCK ||
 		    (UDP_MODE && errno == ENOBUFS))
-			goto again;
+			return;
 		err(1, "write");
 	}
 	if (TCP_MODE && n == 0) {	
@@ -851,7 +879,6 @@ client_init(struct addrinfo *aitop, int nconn, struct statctx *udp_sc,
 				if (bind(sock, (struct sockaddr *)aib->ai_addr,
 				    aib->ai_addrlen) == -1)
 					err(1, "bind");
-				freeaddrinfo(aib);
 			}
 			if (ptb->Tflag != -1 && ai->ai_family == AF_INET) {
 				if (setsockopt(sock, IPPROTO_IP, IP_TOS,
@@ -910,6 +937,8 @@ client_init(struct addrinfo *aitop, int nconn, struct statctx *udp_sc,
 		set_slice_timer(mainstats.nconns > 0);
 	}
 	freeaddrinfo(aitop);
+	if (aib != NULL)
+		freeaddrinfo(aib);
 
 	if (ptb->vflag && nconn > 1)
 		fprintf(stderr, "%d connections established\n",

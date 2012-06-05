@@ -1,4 +1,4 @@
-/* $OpenBSD: layout.c,v 1.8 2012/01/29 09:37:02 nicm Exp $ */
+/* $OpenBSD: layout.c,v 1.13 2012/04/01 21:07:35 nicm Exp $ */
 
 /*
  * Copyright (c) 2009 Nicholas Marriott <nicm@users.sourceforge.net>
@@ -19,6 +19,7 @@
 #include <sys/types.h>
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "tmux.h"
 
@@ -483,6 +484,7 @@ layout_resize_pane(struct window_pane *wp, enum layout_type type, int change)
 	/* Fix cell offsets. */
 	layout_fix_offsets(wp->window->layout_root);
 	layout_fix_panes(wp->window, wp->window->sx, wp->window->sy);
+	notify_window_layout_changed(wp->window);
 }
 
 void
@@ -496,18 +498,18 @@ layout_resize_pane_mouse(struct client *c, struct mouse_event *mouse)
 
 	pane_border = 0;
 	if ((c->last_mouse.b & MOUSE_BUTTON) != MOUSE_UP &&
-		(c->last_mouse.b & MOUSE_RESIZE_PANE)) {
+	    (c->last_mouse.b & MOUSE_RESIZE_PANE)) {
 		TAILQ_FOREACH(wp, &w->panes, entry) {
 			if (wp->xoff + wp->sx == c->last_mouse.x &&
-				wp->yoff <= 1 + c->last_mouse.y &&
-				wp->yoff + wp->sy >= c->last_mouse.y) {
+			    wp->yoff <= 1 + c->last_mouse.y &&
+			    wp->yoff + wp->sy >= c->last_mouse.y) {
 				layout_resize_pane(wp, LAYOUT_LEFTRIGHT,
 				    mouse->x - c->last_mouse.x);
 				pane_border = 1;
 			}
 			if (wp->yoff + wp->sy == c->last_mouse.y &&
-				wp->xoff <= 1 + c->last_mouse.x &&
-				wp->xoff + wp->sx >= c->last_mouse.x) {
+			    wp->xoff <= 1 + c->last_mouse.x &&
+			    wp->xoff + wp->sx >= c->last_mouse.x) {
 				layout_resize_pane(wp, LAYOUT_TOPBOTTOM,
 				    mouse->y - c->last_mouse.y);
 				pane_border = 1;
@@ -516,14 +518,14 @@ layout_resize_pane_mouse(struct client *c, struct mouse_event *mouse)
 		if (pane_border)
 			server_redraw_window(w);
 	} else if (mouse->b != MOUSE_UP &&
-			   mouse->b == (mouse->b & MOUSE_BUTTON)) {
+	    mouse->b == (mouse->b & MOUSE_BUTTON)) {
 		TAILQ_FOREACH(wp, &w->panes, entry) {
 			if ((wp->xoff + wp->sx == mouse->x &&
-				 wp->yoff <= 1 + mouse->y &&
-				 wp->yoff + wp->sy >= mouse->y) ||
-				(wp->yoff + wp->sy == mouse->y &&
-				 wp->xoff <= 1 + mouse->x &&
-				 wp->xoff + wp->sx >= mouse->x)) {
+			    wp->yoff <= 1 + mouse->y &&
+			    wp->yoff + wp->sy >= mouse->y) ||
+			    (wp->yoff + wp->sy == mouse->y &&
+			    wp->xoff <= 1 + mouse->x &&
+			    wp->xoff + wp->sx >= mouse->x)) {
 				pane_border = 1;
 			}
 		}
@@ -616,9 +618,10 @@ layout_assign_pane(struct layout_cell *lc, struct window_pane *wp)
  * split. This must be followed by layout_assign_pane before much else happens!
  **/
 struct layout_cell *
-layout_split_pane(struct window_pane *wp, enum layout_type type, int size)
+layout_split_pane(
+    struct window_pane *wp, enum layout_type type, int size, int insert_before)
 {
-	struct layout_cell     *lc, *lcparent, *lcnew;
+	struct layout_cell     *lc, *lcparent, *lcnew, *lc1, *lc2;
 	u_int			sx, sy, xoff, yoff, size1, size2;
 
 	lc = wp->layout_cell;
@@ -650,8 +653,12 @@ layout_split_pane(struct window_pane *wp, enum layout_type type, int size)
 		 */
 
 		/* Create the new child cell. */
-		lcnew = layout_create_cell(lc->parent);
-		TAILQ_INSERT_AFTER(&lc->parent->cells, lc, lcnew, entry);
+		lcparent = lc->parent;
+		lcnew = layout_create_cell(lcparent);
+		if (insert_before)
+			TAILQ_INSERT_BEFORE(lc, lcnew, entry);
+		else
+			TAILQ_INSERT_AFTER(&lcparent->cells, lc, lcnew, entry);
 	} else {
 		/*
 		 * Otherwise create a new parent and insert it.
@@ -672,7 +679,17 @@ layout_split_pane(struct window_pane *wp, enum layout_type type, int size)
 
 		/* Create the new child cell. */
 		lcnew = layout_create_cell(lcparent);
-		TAILQ_INSERT_TAIL(&lcparent->cells, lcnew, entry);
+		if (insert_before)
+			TAILQ_INSERT_HEAD(&lcparent->cells, lcnew, entry);
+		else
+			TAILQ_INSERT_TAIL(&lcparent->cells, lcnew, entry);
+	}
+	if (insert_before) {
+		lc1 = lcnew;
+		lc2 = lc;
+	} else {
+		lc1 = lc;
+		lc2 = lcnew;
 	}
 
 	/* Set new cell sizes.  size is the target size or -1 for middle split,
@@ -689,8 +706,8 @@ layout_split_pane(struct window_pane *wp, enum layout_type type, int size)
 		else if (size2 > sx - 2)
 			size2 = sx - 2;
 		size1 = sx - 1 - size2;
-		layout_set_size(lc, size1, sy, xoff, yoff);
-		layout_set_size(lcnew, size2, sy, xoff + lc->sx + 1, yoff);
+		layout_set_size(lc1, size1, sy, xoff, yoff);
+		layout_set_size(lc2, size2, sy, xoff + lc1->sx + 1, yoff);
 		break;
 	case LAYOUT_TOPBOTTOM:
 		if (size < 0)
@@ -702,8 +719,8 @@ layout_split_pane(struct window_pane *wp, enum layout_type type, int size)
 		else if (size2 > sy - 2)
 			size2 = sy - 2;
 		size1 = sy - 1 - size2;
-		layout_set_size(lc, sx, size1, xoff, yoff);
-		layout_set_size(lcnew, sx, size2, xoff, yoff + lc->sy + 1);
+		layout_set_size(lc1, sx, size1, xoff, yoff);
+		layout_set_size(lc2, sx, size2, xoff, yoff + lc1->sy + 1);
 		break;
 	default:
 		fatalx("bad layout type");
@@ -727,4 +744,76 @@ layout_close_pane(struct window_pane *wp)
 		layout_fix_offsets(wp->window->layout_root);
 		layout_fix_panes(wp->window, wp->window->sx, wp->window->sy);
 	}
+	notify_window_layout_changed(wp->window);
+}
+
+/* Add layout to list. */
+void
+layout_list_add(struct window *w)
+{
+	struct last_layout	*ll, *ll_last;
+	char			*layout;
+	u_int			 limit;
+
+	layout = layout_dump(w);
+
+	ll_last = w->layout_list_last;
+	if (ll_last != NULL && strcmp(ll_last->layout, layout) == 0) {
+		free(layout);
+		return;
+	}
+
+	ll = xmalloc(sizeof *ll);
+	ll->layout = layout;
+	if (ll_last == NULL)
+		TAILQ_INSERT_TAIL(&w->layout_list, ll, entry);
+	else
+		TAILQ_INSERT_AFTER(&w->layout_list, ll_last, ll, entry);
+	w->layout_list_size++;
+	w->layout_list_last = ll;
+
+	limit = options_get_number(&w->options, "layout-history-limit");
+	while (w->layout_list_size > limit) {
+		ll = TAILQ_LAST(&w->layout_list, last_layouts);
+		if (ll == w->layout_list_last)
+			ll = TAILQ_FIRST(&w->layout_list);
+
+		TAILQ_REMOVE(&w->layout_list, ll, entry);
+		w->layout_list_size--;
+
+		xfree(ll->layout);
+		xfree(ll);
+	}
+}
+
+/* Apply next layout from list. */
+const char *
+layout_list_redo(struct window *w)
+{
+	struct last_layout	*ll, *ll_last;
+
+	ll_last = w->layout_list_last;
+	if (ll_last == NULL)
+		return (NULL);
+	ll = TAILQ_NEXT(ll_last, entry);
+	if (ll == NULL)
+		return (NULL);
+	w->layout_list_last = ll;
+	return (ll->layout);
+}
+
+/* Apply previous layout from list. */
+const char *
+layout_list_undo(struct window *w)
+{
+	struct last_layout	*ll, *ll_last;
+
+	ll_last = w->layout_list_last;
+	if (ll_last == NULL)
+		return (NULL);
+	ll = TAILQ_PREV(ll_last, last_layouts, entry);
+	if (ll == NULL)
+		return (NULL);
+	w->layout_list_last = ll;
+	return (ll->layout);
 }
