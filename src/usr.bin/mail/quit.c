@@ -32,6 +32,7 @@
 
 #include "rcv.h"
 #include <fcntl.h>
+#include <sys/file.h>
 #include "extern.h"
 
 /*

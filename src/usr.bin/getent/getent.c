@@ -47,7 +47,11 @@
 
 #include <net/if.h>
 #include <netinet/in.h>		/* for INET6_ADDRSTRLEN */
+#ifdef OBASE
+#include <netinet/ether.h>
+#else
 #include <netinet/if_ether.h>
+#endif
 
 #include <arpa/inet.h>
 #include <arpa/nameser.h>

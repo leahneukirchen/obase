@@ -63,6 +63,7 @@ tail	{white}
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 
 #include "fgen.h"
 TOKEN token;
