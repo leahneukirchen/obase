@@ -5,6 +5,7 @@ HOSTCC=${CC}
 HOSTCFLAGS+=${COPTS}
 LIBOBASE=${.CURDIR}/libobase/libobase.a
 INCLUDES_libobase=-isystem ${.CURDIR}/libobase/include
+COPTS_libobase=-D_GNU_SOURCE
 DPLIBS+=${LIBOBASE}
 .export COPTS DPLIBS HOSTCC HOSTCFLAGS USE_DPADD_MK
 
