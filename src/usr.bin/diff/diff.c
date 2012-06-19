@@ -255,12 +255,12 @@ main(int argc, char **argv)
 		diffdir(argv[0], argv[1], dflags);
 	} else {
 		if (S_ISDIR(stb1.st_mode)) {
-			argv[0] = splice(argv[0], argv[1]);
+			argv[0] = splice_(argv[0], argv[1]);
 			if (stat(argv[0], &stb1) < 0)
 				err(2, "%s", argv[0]);
 		}
 		if (S_ISDIR(stb2.st_mode)) {
-			argv[1] = splice(argv[1], argv[0]);
+			argv[1] = splice_(argv[1], argv[0]);
 			if (stat(argv[1], &stb2) < 0)
 				err(2, "%s", argv[1]);
 		}

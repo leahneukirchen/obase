@@ -91,7 +91,7 @@ extern struct	stat stb1, stb2;
 extern struct	excludes *excludes_list;
 extern regex_t	ignore_re;
 
-char	*splice(char *, char *);
+char	*splice_(char *, char *);
 int	diffreg(char *, char *, int);
 int	easprintf(char **, const char *, ...);
 void	*emalloc(size_t);

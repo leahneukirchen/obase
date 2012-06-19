@@ -1,5 +1,5 @@
 USE_DPADD_MK=yes
-COPTS+= -isystem ${.CURDIR}/libobase/include -DOBASE -Os -Wall
+COPTS+= -isystem ${.CURDIR}/libobase/include -DOBASE -D_GNU_SOURCE -Os -Wall
 COPTS+= -DMACHINE='"${MACHINE}"' -DMACHINE_ARCH='"${MACHINE_ARCH}"'
 HOSTCC=${CC}
 HOSTCFLAGS+=${COPTS}
