@@ -36,14 +36,15 @@
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
+#else
+# warning "expecting config.h with values such as HAVE_MMAP, etc" 
+# warning "trying without it anyway, which is probably not what you want"
 #endif
 
 #include <stdio.h>	/* Include that here, to make sure __P gets defined */
 #include <errno.h>
 #include <fcntl.h>	/* For open and flags */
-#ifdef HAVE_STDINT_H
 #include <stdint.h>
-#endif
 #ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
 #endif
@@ -354,17 +355,6 @@ protected int file_looks_utf8(const unsigned char *, size_t, unichar *, size_t *
 #ifndef COMPILE_ONLY
 extern const char *file_names[];
 extern const size_t file_nnames;
-#endif
-
-#ifndef HAVE_STRERROR
-extern int sys_nerr;
-extern char *sys_errlist[];
-#define strerror(e) \
-	(((e) >= 0 && (e) < sys_nerr) ? sys_errlist[(e)] : "Unknown error")
-#endif
-
-#ifndef HAVE_STRTOUL
-#define strtoul(a, b, c)	strtol(a, b, c)
 #endif
 
 #ifndef HAVE_VASPRINTF
