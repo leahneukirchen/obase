@@ -27,12 +27,8 @@ struct	manpaths {
 	char	**paths;
 };
 
-__BEGIN_DECLS
-
 void	 manpath_manconf(struct manpaths *, const char *);
 void	 manpath_parse(struct manpaths *, const char *, char *, char *);
 void	 manpath_free(struct manpaths *);
-
-__END_DECLS
 
 #endif /*!MANPATH_H*/

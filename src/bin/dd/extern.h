@@ -36,8 +36,6 @@
  *	@(#)extern.h	8.3 (Berkeley) 4/2/94
  */
 
-#include <sys/cdefs.h>
-
 void block(void);
 void block_close(void);
 void dd_out(int);

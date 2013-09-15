@@ -45,6 +45,7 @@
 #include <sysexits.h>
 
 #define DEFLINE	1000			/* Default num lines per file. */
+#include <obase.h>
 
 ssize_t	 bytecnt;			/* Byte count to split on. */
 long	 numlines;			/* Line count to split on. */

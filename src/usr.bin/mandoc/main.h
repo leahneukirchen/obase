@@ -17,8 +17,6 @@
 #ifndef	MAIN_H
 #define	MAIN_H
 
-__BEGIN_DECLS
-
 struct	mdoc;
 struct	man;
 
@@ -55,7 +53,5 @@ void		  pspdf_free(void *);
 
 void		  terminal_mdoc(void *, const struct mdoc *);
 void		  terminal_man(void *, const struct man *);
-
-__END_DECLS
 
 #endif /*!MAIN_H*/

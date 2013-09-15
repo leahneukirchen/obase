@@ -96,6 +96,10 @@ vcopy(char *str)
  * Look in the environment if it's not available locally.
  */
 
+#ifndef _PATH_CSHELL
+#define _PATH_CSHELL "/bin/csh"
+#endif
+
 char *
 value(char *name)
 {

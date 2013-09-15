@@ -55,8 +55,6 @@ struct	opts {
 	const char	*cat; /* restrict to manual section */
 };
 
-__BEGIN_DECLS
-
 struct	expr;
 
 int		 apropos_search(int, char **, const struct opts *,
@@ -67,7 +65,5 @@ struct	expr	*exprcomp(int, char *[], size_t *);
 void		 exprfree(struct expr *);
 void	 	 resfree(struct res *, size_t);
 struct	expr	*termcomp(int, char *[], size_t *);
-
-__END_DECLS
 
 #endif /*!APROPOS_H*/

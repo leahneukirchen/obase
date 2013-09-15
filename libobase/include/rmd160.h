@@ -36,9 +36,6 @@ typedef struct RMD160Context {
 	u_int8_t buffer[RMD160_BLOCK_LENGTH];	/* input buffer */
 } RMD160_CTX;
 
-#include <sys/cdefs.h>
-
-__BEGIN_DECLS
 void	 RMD160Init(RMD160_CTX *);
 void	 RMD160Transform(u_int32_t [5], const u_int8_t [RMD160_BLOCK_LENGTH])
 		__attribute__((__bounded__(__minbytes__,1,5)))
@@ -57,6 +54,5 @@ char	*RMD160FileChunk(const char *, char *, off_t, off_t)
 char	*RMD160Data(const u_int8_t *, size_t, char *)
 		__attribute__((__bounded__(__string__,1,2)))
 		__attribute__((__bounded__(__minbytes__,3,RMD160_DIGEST_STRING_LENGTH)));
-__END_DECLS
 
 #endif  /* _RMD160_H */

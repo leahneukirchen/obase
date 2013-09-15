@@ -8,4 +8,16 @@
         __asm__(".weak " __STRING(alias) " ; " __STRING(alias)  \
             " = " __STRING(sym))
 
-#include_next <sys/cdefs.h>
+#define DEFFILEMODE 0666
+#define AR_EFMT1 "#1/"
+
+#ifndef EFTYPE
+#include <errno.h>
+#define EFTYPE EINVAL
+#endif
+
+#include <regex.h>
+#ifndef REG_STARTEND
+#define REG_STARTEND REG_NEWLINE
+#endif
+

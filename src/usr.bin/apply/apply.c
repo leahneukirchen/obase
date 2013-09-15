@@ -43,6 +43,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <obase.h>
 
 __dead	void	usage(void);
 static	int	mysystem(const char *);

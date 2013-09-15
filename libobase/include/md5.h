@@ -25,9 +25,6 @@ typedef struct MD5Context {
 	u_int8_t buffer[MD5_BLOCK_LENGTH];	/* input buffer */
 } MD5_CTX;
 
-#include <sys/cdefs.h>
-
-__BEGIN_DECLS
 void	 MD5Init(MD5_CTX *);
 void	 MD5Update(MD5_CTX *, const u_int8_t *, size_t)
 		__attribute__((__bounded__(__string__,2,3)));
@@ -46,6 +43,5 @@ char	*MD5FileChunk(const char *, char *, off_t, off_t)
 char	*MD5Data(const u_int8_t *, size_t, char *)
 		__attribute__((__bounded__(__string__,1,2)))
 		__attribute__((__bounded__(__minbytes__,3,MD5_DIGEST_STRING_LENGTH)));
-__END_DECLS
 
 #endif /* _MD5_H_ */

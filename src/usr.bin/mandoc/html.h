@@ -17,8 +17,6 @@
 #ifndef HTML_H
 #define HTML_H
 
-__BEGIN_DECLS
-
 enum	htmltag {
 	TAG_HTML,
 	TAG_HEAD,
@@ -159,7 +157,5 @@ void		  buffmt_man(struct html *,
 void		  buffmt_includes(struct html *, const char *);
 
 int		  html_strlen(const char *);
-
-__END_DECLS
 
 #endif /*!HTML_H*/
