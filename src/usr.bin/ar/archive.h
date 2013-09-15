@@ -51,6 +51,9 @@
 #define	AR_V	0x1000
 #define	AR_X	0x2000
 #define	AR_CC	0x4000
+
+#include <sys/types.h>
+
 extern u_int options;
 
 /* Set up file copy. */

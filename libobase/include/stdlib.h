@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include_next <stdlib.h>
 #include_next <stddef.h>
+#include <sys/types.h>
 
 u_int32_t arc4random(void);
 void arc4random_buf(void *buf, size_t nbytes);
