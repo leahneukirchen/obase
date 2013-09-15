@@ -33,6 +33,7 @@
 #include <sys/types.h>
 #include <sys/param.h>	/* for MAXPATHLEN */
 #include <sys/stat.h>
+#include <locale.h>
 
 #include "file.h"
 #include "magic.h"
