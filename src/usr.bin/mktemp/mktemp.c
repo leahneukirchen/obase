@@ -22,6 +22,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <err.h>
+#include <obase.h>
 
 __dead void usage(void);
 

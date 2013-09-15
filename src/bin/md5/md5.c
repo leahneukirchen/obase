@@ -38,7 +38,7 @@
 #include <rmd160.h>
 #include <sha1.h>
 #include <sha2.h>
-#include <crc.h>
+#include "crc.h"
 
 #define STYLE_NORMAL	0
 #define STYLE_REVERSE	1

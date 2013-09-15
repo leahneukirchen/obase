@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
+#include <obase.h>
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>

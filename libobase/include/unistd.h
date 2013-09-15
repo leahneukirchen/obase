@@ -1,4 +1,3 @@
-#include <sys/cdefs.h>
 #include <sys/stat.h>
 #include <sys/param.h>
 

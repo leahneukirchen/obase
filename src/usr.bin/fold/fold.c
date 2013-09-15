@@ -40,6 +40,7 @@
 #include <ctype.h>
 #include <err.h>
 #include <limits.h>
+#include <obase.h>
 
 #define	DEFLINEWIDTH	80
 

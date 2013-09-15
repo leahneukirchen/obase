@@ -37,6 +37,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <obase.h>
 
 static __dead void	usage(void);
 static void		doalarm(u_int secs);

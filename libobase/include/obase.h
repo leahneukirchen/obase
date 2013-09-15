@@ -8,4 +8,3 @@
         __asm__(".weak " __STRING(alias) " ; " __STRING(alias)  \
             " = " __STRING(sym))
 
-#include_next <sys/cdefs.h>

@@ -42,7 +42,6 @@
 #include "stty.h"
 #include "extern.h"
 
-__BEGIN_DECLS
 void	f_all(struct info *);
 void	f_cbreak(struct info *);
 void	f_columns(struct info *);
@@ -62,7 +61,6 @@ void	f_speed(struct info *);
 void	f_ostart(struct info *);
 void	f_ostop(struct info *);
 void	f_tty(struct info *);
-__END_DECLS
 
 static struct key {
 	char *name;				/* name */

@@ -45,6 +45,7 @@
 #include <time.h>
 #include <tzfile.h>
 #include <unistd.h>
+#include <obase.h>
 
 void		stime_arg1(char *, struct timespec *);
 void		stime_arg2(char *, int, struct timespec *);

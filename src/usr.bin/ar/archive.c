@@ -35,6 +35,7 @@
 
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <sys/file.h>
 
 #include <ar.h>
 #include <dirent.h>
@@ -45,6 +46,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <obase.h>
 
 #include "archive.h"
 #include "extern.h"

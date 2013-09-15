@@ -42,6 +42,7 @@
 #include <locale.h>
 #include <unistd.h>
 #include <err.h>
+#include <obase.h>
 
 #define FORMAT_DEC "%07ld "
 #define FORMAT_OCT "%07lo "

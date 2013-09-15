@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <err.h>
+#include <obase.h>
 
 /* test(1) accepts the following grammar:
 	oexpr	::= aexpr | aexpr "-o" oexpr ;

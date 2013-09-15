@@ -102,14 +102,10 @@ struct	man_node {
 /* Names of macros.  Index is enum mant. */
 extern	const char *const *man_macronames;
 
-__BEGIN_DECLS
-
 struct	man;
 
 const struct man_node *man_node(const struct man *);
 const struct man_meta *man_meta(const struct man *);
 const struct mparse   *man_mparse(const struct man *);
-
-__END_DECLS
 
 #endif /*!MAN_H*/

@@ -93,8 +93,6 @@ typedef struct {
 #define	HDR3	"%-16.15s%-12ld%-6u%-6u%-8o%-10qd%2s"
 
 
-#include <sys/cdefs.h>
-
 struct stat;
 
 void	close_archive(int);

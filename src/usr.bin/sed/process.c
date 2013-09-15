@@ -47,6 +47,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <obase.h>
 
 #include "defs.h"
 #include "extern.h"
@@ -506,7 +507,6 @@ regexec_e(regex_t *preg, const char *string, int eflags,
 		slen--;
 	match[0].rm_so = 0;
 	match[0].rm_eo = slen;
-	
 	eval = regexec(defpreg, string,
 	    nomatch ? 0 : maxnsub + 1, match, eflags | REG_STARTEND);
 	switch (eval) {

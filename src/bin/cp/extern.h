@@ -46,7 +46,6 @@ extern char *__progname;
 
 #include <sys/cdefs.h>
 
-__BEGIN_DECLS
 int	copy_fifo(struct stat *, int);
 int	copy_file(FTSENT *, int);
 int	copy_link(FTSENT *, int);
@@ -54,4 +53,3 @@ int	copy_special(struct stat *, int);
 int	setfile(struct stat *, int);
 int	setlink(struct stat *);
 void	usage(void);
-__END_DECLS

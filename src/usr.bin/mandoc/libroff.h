@@ -17,8 +17,6 @@
 #ifndef LIBROFF_H
 #define LIBROFF_H
 
-__BEGIN_DECLS
-
 enum	tbl_part {
 	TBL_PART_OPTS, /* in options (first line) */
 	TBL_PART_LAYOUT, /* describing layout */
@@ -78,7 +76,5 @@ enum rofferr	 eqn_end(struct eqn_node **);
 void		 eqn_free(struct eqn_node *);
 enum rofferr 	 eqn_read(struct eqn_node **, int, 
 			const char *, int, int *);
-
-__END_DECLS
 
 #endif /*LIBROFF_H*/

@@ -34,8 +34,6 @@ enum	regs {
 	REG__MAX
 };
 
-__BEGIN_DECLS
-
 struct	roff;
 struct	mdoc;
 struct	man;
@@ -86,7 +84,5 @@ int		 roff_closeeqn(struct roff *);
 
 const struct tbl_span	*roff_span(const struct roff *);
 const struct eqn	*roff_eqn(const struct roff *);
-
-__END_DECLS
 
 #endif /*!LIBMANDOC_H*/

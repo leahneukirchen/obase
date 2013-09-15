@@ -41,6 +41,7 @@
 #include <string.h>
 #include <locale.h>
 #include <err.h>
+#include <obase.h>
 
 typedef struct _list {
 	struct _list *next;
