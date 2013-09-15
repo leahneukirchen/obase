@@ -17,7 +17,7 @@ stamp_tabs: awkgram.y
 ytab.c ytab.h: stamp_tabs
 
 proctab.c: gen/maketab
-	gen/maketab >proctab.c
+	gen/maketab ytab.h >proctab.c
 
 gen/maketab: ytab.h gen/maketab.c
 	${HOSTCC} ${HOSTCFLAGS} ${.CURDIR}/gen/maketab.c -o $@
