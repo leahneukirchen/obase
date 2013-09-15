@@ -28,7 +28,7 @@ extern int32_t yylval;
 int32_t number(void);
 int32_t parse_radix(void);
 %}
-
+%option noyywrap
 delim 	[ \t\n]
 ws	{delim}+
 hex	0[xX][0-9a-fA-F]+
