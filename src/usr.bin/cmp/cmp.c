@@ -109,8 +109,8 @@ main(int argc, char *argv[])
 			err(ERR_EXIT, "%s", file2);
 	}
 
-	skip1 = argc > 2 ? strtoq(argv[2], NULL, 0) : 0;
-	skip2 = argc == 4 ? strtoq(argv[3], NULL, 0) : 0;
+	skip1 = argc > 2 ? strtoll(argv[2], NULL, 0) : 0;
+	skip2 = argc == 4 ? strtoll(argv[3], NULL, 0) : 0;
 
 	if (!special) {
 		if (fstat(fd1, &sb1)) {
