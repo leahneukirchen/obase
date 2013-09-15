@@ -34,7 +34,6 @@
 #ifndef _UTIL_H_
 #define _UTIL_H_
 
-#include <sys/cdefs.h>
 #include <sys/types.h>
 
 /*
@@ -79,7 +78,6 @@ struct termios;
 struct utmp;
 struct winsize;
 
-__BEGIN_DECLS
 char   *fparseln(FILE *, size_t *, size_t *, const char[3], int);
 void	login(struct utmp *);
 int	login_tty(int);
@@ -114,6 +112,5 @@ int     uu_unlock(const char *_ttyname);
 int	fmt_scaled(long long number, char *result);
 int	scan_scaled(char *scaled, long long *result);
 int	isduid(const char *, int);
-__END_DECLS
 
 #endif /* !_UTIL_H_ */

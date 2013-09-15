@@ -28,6 +28,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <paths.h>
+#include <obase.h>
 
 #define PROG_WHICH	1
 #define PROG_WHEREIS	2

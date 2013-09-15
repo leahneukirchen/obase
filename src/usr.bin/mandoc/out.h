@@ -51,8 +51,6 @@ struct	rofftbl {
 	void		*arg; /* passed to slen and len */
 };
 
-__BEGIN_DECLS
-
 #define	SCALE_VS_INIT(p, v) \
 	do { (p)->unit = SCALE_VS; \
 	     (p)->scale = (v); } \
@@ -65,7 +63,5 @@ __BEGIN_DECLS
 
 int	  	  a2roffsu(const char *, struct roffsu *, enum roffscale);
 void	  	  tblcalc(struct rofftbl *tbl, const struct tbl_span *);
-
-__END_DECLS
 
 #endif /*!OUT_H*/

@@ -31,8 +31,8 @@
  *
  * RC4 is a registered trademark of RSA Laboratories.
  */
+#include <obase.h>
 
-#include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
 
 #include <sys/types.h>

@@ -26,9 +26,6 @@ typedef struct MD4Context {
 	u_int8_t buffer[MD4_BLOCK_LENGTH];	/* input buffer */
 } MD4_CTX;
 
-#include <sys/cdefs.h>
-
-__BEGIN_DECLS
 void	 MD4Init(MD4_CTX *);
 void	 MD4Update(MD4_CTX *, const u_int8_t *, size_t)
 		__attribute__((__bounded__(__string__,2,3)));
@@ -47,6 +44,5 @@ char	*MD4FileChunk(const char *, char *, off_t, off_t)
 char	*MD4Data(const u_int8_t *, size_t, char *)
 		__attribute__((__bounded__(__string__,1,2)))
 		__attribute__((__bounded__(__minbytes__,3,MD4_DIGEST_STRING_LENGTH)));
-__END_DECLS
 
 #endif /* _MD4_H_ */

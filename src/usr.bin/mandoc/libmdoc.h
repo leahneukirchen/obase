@@ -98,8 +98,6 @@ enum	mdelim {
 
 extern	const struct mdoc_macro *const mdoc_macros;
 
-__BEGIN_DECLS
-
 #define		  mdoc_pmsg(m, l, p, t) \
 		  mandoc_msg((t), (m)->parse, (l), (p), NULL)
 #define		  mdoc_nmsg(m, n, t) \
@@ -136,7 +134,5 @@ enum margserr	  mdoc_zargs(struct mdoc *, int,
 			int *, char *, char **);
 int		  mdoc_macroend(struct mdoc *);
 enum mdelim	  mdoc_isdelim(const char *);
-
-__END_DECLS
 
 #endif /*!LIBMDOC_H*/

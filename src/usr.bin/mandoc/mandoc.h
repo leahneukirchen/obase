@@ -391,8 +391,6 @@ struct	mchars;
 struct	mdoc;
 struct	man;
 
-__BEGIN_DECLS
-
 void		 *mandoc_calloc(size_t, size_t);
 enum mandoc_esc	  mandoc_escape(const char **, const char **, int *);
 void		 *mandoc_malloc(size_t);
@@ -418,7 +416,5 @@ void		  mparse_result(struct mparse *,
 const char	 *mparse_getkeep(const struct mparse *);
 const char	 *mparse_strerror(enum mandocerr);
 const char	 *mparse_strlevel(enum mandoclevel);
-
-__END_DECLS
 
 #endif /*!MANDOC_H*/

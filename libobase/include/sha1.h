@@ -13,15 +13,14 @@
 #define	SHA1_DIGEST_LENGTH		20
 #define	SHA1_DIGEST_STRING_LENGTH	(SHA1_DIGEST_LENGTH * 2 + 1)
 
+#include <sys/types.h>
+
 typedef struct {
     u_int32_t state[5];
     u_int64_t count;
     u_int8_t buffer[SHA1_BLOCK_LENGTH];
 } SHA1_CTX;
 
-#include <sys/cdefs.h>
-
-__BEGIN_DECLS
 void SHA1Init(SHA1_CTX *);
 void SHA1Pad(SHA1_CTX *);
 void SHA1Transform(u_int32_t [5], const u_int8_t [SHA1_BLOCK_LENGTH])
@@ -40,7 +39,6 @@ char *SHA1FileChunk(const char *, char *, off_t, off_t)
 char *SHA1Data(const u_int8_t *, size_t, char *)
 	__attribute__((__bounded__(__string__,1,2)))
 	__attribute__((__bounded__(__minbytes__,3,SHA1_DIGEST_STRING_LENGTH)));
-__END_DECLS
 
 #define HTONDIGEST(x) do {                                              \
         x[0] = htonl(x[0]);                                             \

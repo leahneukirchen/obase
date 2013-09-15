@@ -380,13 +380,9 @@ extern	const char *const *mdoc_macronames;
 /* Names of macro args.  Index is enum mdocargt. */
 extern	const char *const *mdoc_argnames;
 
-__BEGIN_DECLS
-
 struct	mdoc;
 
 const struct mdoc_node *mdoc_node(const struct mdoc *);
 const struct mdoc_meta *mdoc_meta(const struct mdoc *);
-
-__END_DECLS
 
 #endif /*!MDOC_H*/

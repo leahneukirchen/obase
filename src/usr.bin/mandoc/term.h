@@ -17,8 +17,6 @@
 #ifndef TERM_H
 #define TERM_H
 
-__BEGIN_DECLS
-
 struct	termp;
 
 enum	termenc {
@@ -124,7 +122,5 @@ void		  term_fontpop(struct termp *);
 void		  term_fontpopq(struct termp *, const void *);
 void		  term_fontrepl(struct termp *, enum termfont);
 void		  term_fontlast(struct termp *);
-
-__END_DECLS
 
 #endif /*!TERM_H*/

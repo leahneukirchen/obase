@@ -36,6 +36,7 @@
 #include <unistd.h>
 #include <err.h>
 #include <vis.h>
+#include <obase.h>
 
 int eflags, fold, foldwidth=80, none, markeol;
 

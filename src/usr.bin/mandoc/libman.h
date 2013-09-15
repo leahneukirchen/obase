@@ -59,8 +59,6 @@ struct	man_macro {
 
 extern	const struct man_macro *const man_macros;
 
-__BEGIN_DECLS
-
 #define		  man_pmsg(m, l, p, t) \
 		  mandoc_msg((t), (m)->parse, (l), (p), NULL)
 #define		  man_nmsg(m, n, t) \
@@ -79,7 +77,5 @@ int		  man_valid_post(struct man *);
 int		  man_valid_pre(struct man *, struct man_node *);
 int		  man_unscope(struct man *, 
 			const struct man_node *, enum mandocerr);
-
-__END_DECLS
 
 #endif /*!LIBMAN_H*/

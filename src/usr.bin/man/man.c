@@ -432,6 +432,12 @@ append_subdirs(TAG *t, const char *machine)
  * manual --
  *	Search the manuals for the pages.
  */
+
+#ifndef GLOB_BRACE
+#warning "GLOB_BRACE is not defined, so the code using it may behave unexpected"
+#define GLOB_BRACE (1 << 10)
+#endif
+
 static int
 manual(char *page, TAG *tag, glob_t *pg)
 {

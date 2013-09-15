@@ -40,6 +40,7 @@
 #include <sys/file.h>
 #include <unistd.h>
 #include <util.h>
+#include <fcntl.h>
 
 int64_t	tlinect, twordct, tcharct;
 int	doline, doword, dochar, humanchar;

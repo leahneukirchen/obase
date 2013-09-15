@@ -5,10 +5,45 @@
  */
 
 #include "sh.h"
+#include <signal.h>
 
 Trap sigtraps[NSIG + 1];
 
 static struct sigaction Sigact_ign, Sigact_trap;
+
+static const char signames__[][7] = {
+        [SIGHUP]    = "HUP",
+        [SIGINT]    = "INT",
+        [SIGQUIT]   = "QUIT",
+        [SIGILL]    = "ILL",
+        [SIGTRAP]   = "TRAP",
+        [SIGABRT]   = "ABRT",
+        [SIGBUS]    = "BUS",
+        [SIGFPE]    = "FPE",
+        [SIGKILL]   = "KILL",
+        [SIGUSR1]   = "USR1",
+        [SIGSEGV]   = "SEGV",
+        [SIGUSR2]   = "USR2",
+        [SIGPIPE]   = "PIPE",
+        [SIGALRM]   = "ALRM",
+        [SIGTERM]   = "TERM",
+        [SIGSTKFLT] = "STKFLT",
+        [SIGCHLD]   = "CHLD",
+        [SIGCONT]   = "CONT",
+        [SIGSTOP]   = "STOP",
+        [SIGTSTP]   = "TSTP",
+        [SIGTTIN]   = "TTIN",
+        [SIGTTOU]   = "TTOU",
+        [SIGURG]    = "URG",
+        [SIGXCPU]   = "XCPU",
+        [SIGXFSZ]   = "XFSZ",
+        [SIGVTALRM] = "VTALRM",
+        [SIGPROF]   = "PROF",
+        [SIGWINCH]  = "WINCH",
+        [SIGPOLL]   = "POLL",
+        [SIGPWR]    = "PWR",
+        [SIGSYS]    = "SYS"
+};
 
 void
 inittraps(void)
@@ -22,8 +57,9 @@ inittraps(void)
 			sigtraps[i].name = "ERR";
 			sigtraps[i].mess = "Error handler";
 		} else {
-			sigtraps[i].name = sys_signame[i];
-			sigtraps[i].mess = sys_siglist[i];
+			sigtraps[i].name = (i >= 0 && i < sizeof signames__/sizeof signames__[0] && *signames__[i]) ?
+			                   signames__[i]: "UNKNOWN";
+			sigtraps[i].mess = strsignal(i);
 		}
 	}
 	sigtraps[SIGEXIT_].name = "EXIT";	/* our name for signal 0 */

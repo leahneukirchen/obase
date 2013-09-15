@@ -50,6 +50,7 @@
 #include <utmp.h>
 #include <vis.h>
 #include <err.h>
+#include <obase.h>
 
 struct wallgroup {
 	gid_t	gid;

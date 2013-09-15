@@ -51,6 +51,9 @@
 #define	AR_V	0x1000
 #define	AR_X	0x2000
 #define	AR_CC	0x4000
+
+#include <sys/types.h>
+
 extern u_int options;
 
 /* Set up file copy. */
@@ -92,8 +95,6 @@ typedef struct {
 #define	OLDARMAXNAME	15
 #define	HDR3	"%-16.15s%-12ld%-6u%-6u%-8o%-10qd%2s"
 
-
-#include <sys/cdefs.h>
 
 struct stat;
 

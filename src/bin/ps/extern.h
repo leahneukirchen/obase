@@ -43,7 +43,6 @@ extern int sumrusage, termwidth, totwidth, kvm_sysctl_only, needheader;
 extern VAR var[];
 extern VARENT *vhead;
 
-__BEGIN_DECLS
 void	 command(const struct kinfo_proc *, VARENT *);
 void	 cputime(const struct kinfo_proc *, VARENT *);
 int	 donlist(void);
@@ -83,4 +82,3 @@ void	 curwd(const struct kinfo_proc *, VARENT *);
 void	 euname(const struct kinfo_proc *, VARENT *);
 void	 vsize(const struct kinfo_proc *, VARENT *);
 void	 wchan(const struct kinfo_proc *, VARENT *);
-__END_DECLS

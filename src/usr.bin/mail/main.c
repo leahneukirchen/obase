@@ -30,6 +30,7 @@
  * SUCH DAMAGE.
  */
 
+#include <obase.h>
 #include "rcv.h"
 #include <fcntl.h>
 #include <sys/ioctl.h>

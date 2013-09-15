@@ -40,7 +40,6 @@
  * External references from each source file
  */
 
-#include <sys/cdefs.h>
 
 /*
  * ar_io.c

@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <obase.h>
 
 static void p_time(struct shf *, int, struct timeval *, int, char *, char *);
 
