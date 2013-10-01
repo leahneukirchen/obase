@@ -1462,7 +1462,7 @@ str_offt(char *val)
 	num = strtol(val, &expr, 0);
 	if ((num == LONG_MAX) || (num <= 0) || (expr == val))
 #	else
-	num = strtoq(val, &expr, 0);
+	num = strtoll(val, &expr, 0);
 	if ((num == QUAD_MAX) || (num <= 0) || (expr == val))
 #	endif
 		return(0);

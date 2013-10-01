@@ -591,7 +591,7 @@ remotesize(const char *file, int noisy)
 		cp = strchr(reply_string, ' ');
 		if (cp != NULL) {
 			cp++;
-			size = strtoq(cp, &ep, 10);
+			size = strtoll(cp, &ep, 10);
 			if (*ep != '\0' && !isspace(*ep))
 				size = -1;
 		}

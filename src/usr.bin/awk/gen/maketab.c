@@ -32,8 +32,8 @@ THIS SOFTWARE.
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "awk.h"
-#include "ytab.h"
+#include "../awk.h"
+#include "../ytab.h"
 
 struct xx
 {	int token;
@@ -125,10 +125,16 @@ int main(int argc, char *argv[])
 	for (i = SIZE; --i >= 0; )
 		names[i] = "";
 
-	if ((fp = fopen("ytab.h", "r")) == NULL) {
+	if(argc != 2) {
+		fprintf(stderr, "maketab: expecting filename of ytab.h!\n");
+		exit(1);
+	}
+
+	if ((fp = fopen(argv[1], "r")) == NULL) {
 		fprintf(stderr, "maketab: can't open ytab.h!\n");
 		exit(1);
 	}
+
 	printf("static char *printname[%d] = {\n", SIZE);
 	i = 0;
 	while (fgets(buf, sizeof buf, fp) != NULL) {
