@@ -14,8 +14,6 @@
 /* SUPPRESS 287 on yaccpar_sccsid *//* Unused static variable */
 /* SUPPRESS 288 on yyerrlab *//* Label unused */
 
-#include <sys/timeb.h>
-
 #include <ctype.h>
 #include <err.h>
 #include <string.h>

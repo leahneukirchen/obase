@@ -1439,7 +1439,7 @@ restart(int argc, char *argv[])
 	if (argc != 2)
 		fputs("restart: offset not specified.\n", ttyout);
 	else {
-		nrestart_point = strtoq(argv[1], &ep, 10);
+		nrestart_point = strtoll(argv[1], &ep, 10);
 		if (nrestart_point == QUAD_MAX || *ep != '\0')
 			fputs("restart: invalid offset.\n", ttyout);
 		else {

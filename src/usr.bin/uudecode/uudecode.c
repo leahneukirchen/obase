@@ -425,7 +425,7 @@ base64_decode(void)
 		case 1:
 			return (1);
 		}
-		n = b64_pton(inbuf, outbuf, sizeof(outbuf));
+		n = __b64_pton(inbuf, outbuf, sizeof(outbuf));
 		if (n < 0)
 			break;
 		fwrite(outbuf, 1, n, outfp);

@@ -4,7 +4,7 @@ PROG=	awk
 SRCS=	ytab.c lex.c b.c main.c parse.c proctab.c tran.c lib.c run.c
 LDADD=	-lm
 DPADD=	${LIBM}
-CLEANFILES+=proctab.c maketab ytab.c ytab.h stamp_tabs
+CLEANFILES+=proctab.c gen/maketab ytab.c ytab.h stamp_tabs
 CFLAGS+=-I. -I${.CURDIR} -DHAS_ISBLANK -DNDEBUG
 HOSTCFLAGS+=-I. -I${.CURDIR} -DHAS_ISBLANK -DNDEBUG
 
@@ -16,10 +16,10 @@ stamp_tabs: awkgram.y
 
 ytab.c ytab.h: stamp_tabs
 
-proctab.c: maketab
-	./maketab >proctab.c
+proctab.c: gen/maketab
+	gen/maketab ytab.h >proctab.c
 
-maketab: ytab.h maketab.c
-	${HOSTCC} ${HOSTCFLAGS} ${.CURDIR}/maketab.c -o $@
+gen/maketab: ytab.h gen/maketab.c
+	${HOSTCC} ${HOSTCFLAGS} ${.CURDIR}/gen/maketab.c -o $@
 
 .include <bsd.prog.mk>
